@@ -53,7 +53,7 @@
 - **제보**: prd-validator (2026-07-23)
 - **내용**: Supabase 공식 quotas 문서가 "이벤트 = 클라이언트에게 전달되거나 클라이언트가 보낸 WebSocket 메시지"라고만 정의하고, **브로드캐스트 1건을 구독자 N명에게 보낼 때 1로 세는지 N으로 세는지 명시하지 않는다.** N으로 센다면 Pro(초당 500)에서 100명 방의 채팅이 **초당 5건**이 상한이 되어 용량 계획이 20배 달라진다.
 - **영향**: D-023, NFR-003·006, R-011, **R-019**. I-017의 요금제 판단이 이 값에 종속된다.
-- **후속**: 해소 방법 — ① Supabase 대시보드 **Project Settings > Product Reports > Realtime** 에서 소규모 부하로 실측 ② Supabase 지원팀 문의(공식 문서가 Postgres Changes 항목에서 직접 권하는 경로). 새 프로젝트(D-018) 생성 후 진행한다.
+- **후속**: 해소 방법 — ① Supabase 대시보드 **Project Settings > Product Reports > Realtime** 에서 소규모 부하로 실측 ② Supabase 지원팀 문의(공식 문서가 Postgres Changes 항목에서 직접 권하는 경로). MO-IM 프로젝트가 초기화되어(**D-037**) 실측을 막던 선행 조건은 해소됐다.
 
 ### I-019 · 팀 규모가 미정이라 일정을 산출할 수 없다
 

@@ -39,13 +39,13 @@ Next.js 16.2.11(App Router) + React 19.2.4 + TypeScript(strict) + Tailwind CSS v
 
 ## 사용 가능한 MCP 서버
 
-`.mcp.json`에 설정된 서버: `supabase`(**⚠️ 아래 경고 참고**), `context7`(라이브러리 문서), `shadcn`(컴포넌트 레지스트리), `playwright`(브라우저 자동화), `serena`(시맨틱 코드 도구), `sequential-thinking`, `shrimp-task-manager`(상태는 `shrimp_data/`에 저장).
+`.mcp.json`에 설정된 서버: `supabase`(**아래 참고**), `context7`(라이브러리 문서), `shadcn`(컴포넌트 레지스트리), `playwright`(브라우저 자동화), `serena`(시맨틱 코드 도구), `sequential-thinking`, `shrimp-task-manager`(상태는 `shrimp_data/`에 저장).
 
-> **⚠️ Supabase project ref 교체 필요 (D-018)**
+> **Supabase 프로젝트 (D-018 · D-037)**
 >
-> `.mcp.json`에 설정된 ref `damruradpliktkrlkakl`은 **mo_im의 것이 아니다.** 확인 결과 **다른 애플리케이션(축구 매니저 시뮬레이션)이 테이블 43개·마이그레이션 33건으로 점유** 중이며, `public.profile`·`public.audit_log`가 mo_im 계획과 이름이 충돌하고 `handle_new_user` 트리거가 **가입자마다 무관한 `wallet` 행을 생성**한다.
+> `supabase` MCP가 가리키는 ref `damruradpliktkrlkakl`은 **mo_im 전용 프로젝트 `MO-IM`이다.** 원래 타 앱(축구 매니저 시뮬레이션)이 점유하던 것을 **초기화해 재사용**했으므로 `.mcp.json`·`.env.local`·PRD §8의 **ref 값은 교체하지 않는다** — 이전 지침의 "ref 교체 필요" 경고와 R-018은 이 결정으로 종결됐다. 경위·초기화 범위·검증 결과는 `docs/prioritization-and-risks.md`의 **D-037**에 있다.
 >
-> mo_im은 **전용 프로젝트**를 쓴다. **ref를 교체하기 전에는 어떤 마이그레이션도 적용하지 말 것** — 타 앱 운영 DB가 손상된다(**R-018**). 적용 전에 `list_tables`가 0개인지 반드시 확인한다.
+> 그래도 **`apply_migration`은 대상 프로젝트를 되묻지 않는다.** 첫 마이그레이션 전에는 `list_tables`가 0개인지 확인하고, 낯선 테이블(`player`·`fixture` 등)이 보이면 멈춘다.
 
 ## 개발 원칙
 
