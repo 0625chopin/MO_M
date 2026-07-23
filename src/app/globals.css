@@ -1,26 +1,219 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* ── mo_im Task 002 — Crew calendar 12-color palette ──────────────────
+     CON-04 / D-026 / D-006 / FR-062. One set of 12 colors covers BOTH
+     light and dark (D-026 §"단일 팔레트 한 벌로 라이트·다크 양쪽이 통과") —
+     that's why there's no --color-crew-N override under `.dark` below.
+     Index order is NOT hue order. It's a greedy farthest-point ordering
+     over deuteranopia(2형)-simulated CIEDE2000 distance, so that
+     index i -> index i+1 (mod 12) — the walk FR-062 AC3's same-day
+     collision rule uses — is close to perceptually-maximal, not just
+     "the next array slot". Do not reorder without re-running the
+     derivation script (see docs/design/calendar-palette.md, which also
+     has the full contrast table, the CVD delta-E matrix, and the pairs
+     that stay hard to tell apart under CVD — those are why NFR-019's
+     text-label + aria-label requirement is treated as unbreakable at
+     every call site, not covered by this file). */
+  --color-crew-1: var(--crew-1);
+  --color-crew-2: var(--crew-2);
+  --color-crew-3: var(--crew-3);
+  --color-crew-4: var(--crew-4);
+  --color-crew-5: var(--crew-5);
+  --color-crew-6: var(--crew-6);
+  --color-crew-7: var(--crew-7);
+  --color-crew-8: var(--crew-8);
+  --color-crew-9: var(--crew-9);
+  --color-crew-10: var(--crew-10);
+  --color-crew-11: var(--crew-11);
+  --color-crew-12: var(--crew-12);
 }
 
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  /* Crew palette values (index order = collision-walk order, see the
+     @theme inline comment above and docs/design/calendar-palette.md).
+     Each color is pre-verified >= 3:1 (NFR-018 non-text) against BOTH
+     --background: oklch(1 0 0) here and oklch(0.145 0 0) under `.dark` —
+     measured contrast per color is 3.26–6.08, never below 3.0. */
+  --crew-1: #939300; /* olive (H60), Y=0.271, vs light 3.27 / vs dark 6.05 */
+  --crew-2: #8d1cff; /* violet (H270), Y=0.137, vs light 5.61 / vs dark 3.53 */
+  --crew-3: #ff3e9e; /* pink (H330), Y=0.272, vs light 3.26 / vs dark 6.07 */
+  --crew-4: #007475; /* teal (H180), Y=0.138, vs light 5.59 / vs dark 3.54 */
+  --crew-5: #3b7500; /* green (H90), Y=0.137, vs light 5.63 / vs dark 3.52 */
+  --crew-6: #8080ff; /* periwinkle (H240), Y=0.273, vs light 3.26 / vs dark 6.08 */
+  --crew-7: #00a352; /* emerald (H150), Y=0.268, vs light 3.30 / vs dark 6.00 */
+  --crew-8: #009200; /* green (H120), Y=0.206, vs light 4.11 / vs dark 4.82 */
+  --crew-9: #007af5; /* blue (H210), Y=0.205, vs light 4.12 / vs dark 4.81 */
+  --crew-10: #dc00dc; /* magenta (H300), Y=0.204, vs light 4.14 / vs dark 4.79 */
+  --crew-11: #c36200; /* brown/orange (H30), Y=0.203, vs light 4.14 / vs dark 4.78 */
+  --crew-12: #d20000; /* red (H0), Y=0.137, vs light 5.61 / vs dark 3.53 */
+}
+
+/* OS 다크 감지 폴백 (mo_im 1일차 교차검증 — BOARD 지적사항 #1).
+   명시적 테마 토글(ThemeProvider)은 Task 011(DESIGN)로 이월됐다. 그때까지는
+   사용자가 아직 명시 선택을 하지 않은 기본 상태에서 OS 설정을 따라가도록
+   여기서 `.dark`와 동일한 뉴트럴 토큰 값을 미디어 쿼리로 다시 적용한다.
+   `--crew-*`는 D-026에 따라 라이트·다크 단일값이라 재정의하지 않는다.
+   토큰 값은 아래 `.dark` 블록과 반드시 동기화 상태를 유지할 것 — 값을 고칠 때
+   두 곳을 함께 고친다. `.dark`가 이 블록보다 소스 순서상 뒤에 있어 향후
+   명시적 토글이 클래스를 붙이면 OS 설정과 무관하게 `.dark`가 우선한다. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }
