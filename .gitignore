@@ -47,3 +47,7 @@ shrimp_data/
 
 # supabase (CLI local link cache)
 supabase/.temp/
+
+# playwright MCP 검증 산출물 (교차검증 중 자동 생성되는 콘솔 로그·스냅샷·스크린샷)
+.playwright-mcp/
+crews-*.png

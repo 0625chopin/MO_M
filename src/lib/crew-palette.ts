@@ -21,13 +21,21 @@
  * that point in the sequence. Reordering this array breaks that
  * property — don't sort it, don't insert into the middle.
  *
- * This module intentionally does NOT implement `hash(crew.id) mod 12`.
- * That assignment function belongs to CREW's domain layer (a React-free
- * pure function per CLAUDE.md — the compiler only memoizes components/
- * hooks, not domain logic like this). This module only owns: the palette
- * itself, and the pure collision-resolution walk that D-026 defines,
- * both of which are "palette" concerns, not "how do we hash a crew id"
- * concerns.
+ * This module intentionally does NOT implement `hash(crew.id) mod 12`, nor
+ * (as of Task 009B, 3일차) the D-026 same-cell collision walk anymore —
+ * both are "judgment" functions and now live in
+ * `src/lib/rules/crew-color-hash.ts` (`crewColorIndex`,
+ * `resolveCrewColorCollision`, `assignCrewColorForDateCell`). This module
+ * keeps only the palette **data** (hex/luminance/contrast/token, index-locked
+ * to `globals.css`) and `normalizePaletteIndex` — the latter stays here
+ * (not moved to `lib/rules/`) because it's a bounds-wrap over this array's
+ * own size (`CREW_PALETTE_SIZE`), used by the plain data-lookup function
+ * `getCrewColor` below regardless of any hashing/collision decision. Moving
+ * it would make this data module depend on the judgment module, which is
+ * backwards — `lib/rules/crew-color-hash.ts` importing `CREW_PALETTE_SIZE`/
+ * `normalizePaletteIndex` **from here** is the natural direction. See that
+ * file's module doc for the full 1일차→3일차 migration rationale, and
+ * `docs/CONVENTIONS.md` / `src/lib/rules/README.md` for the record.
  */
 
 export interface CrewPaletteColor {
@@ -90,39 +98,8 @@ export function getCrewColor(index: number): CrewPaletteColor {
   return CREW_PALETTE[normalizePaletteIndex(index)];
 }
 
-/**
- * FR-062 AC3 / D-026 same-day-cell collision resolution.
- *
- * Given the index a crew would normally get (`baseIndex`, from
- * `hash(crew.id) mod 12`) and the set of indices already showing in that
- * date cell (`occupiedIndices`), returns the first free index walking
- * forward through the palette's collision-walk order — i.e. the order
- * this array is already in, which is deuteranopia-ΔE-maximized, not raw
- * numeric adjacency (that was D-006's original rule; D-026 replaced it
- * because index distance != perceptual distance).
- *
- * Pure function: no React, no DOM, no Supabase — safe to call from a
- * server component, a Server Action, or CREW's hashing module.
- *
- * Global uniqueness is NOT guaranteed (impossible past 12 concurrent
- * crews in one cell, D-014/R-017) — this only avoids the collision
- * within the single cell being rendered, retrying up to
- * {@link CREW_PALETTE_SIZE} steps before giving up and returning
- * `baseIndex` unchanged (all colors occupied — caller/UI should already
- * be relying on the crew-name label + aria-label at that point, since
- * NFR-019 treats those as mandatory regardless of color).
- */
-export function resolveCrewColorCollision(
-  baseIndex: number,
-  occupiedIndices: Iterable<number>,
-): number {
-  const occupied = new Set<number>();
-  for (const i of occupiedIndices) occupied.add(normalizePaletteIndex(i));
-
-  const start = normalizePaletteIndex(baseIndex);
-  for (let step = 0; step < CREW_PALETTE_SIZE; step++) {
-    const candidate = normalizePaletteIndex(start + step);
-    if (!occupied.has(candidate)) return candidate;
-  }
-  return start; // all 12 occupied in this cell; label/aria-label carry the load
-}
+// `resolveCrewColorCollision` (FR-062 AC3 / D-026 same-day-cell collision
+// resolution) moved to `src/lib/rules/crew-color-hash.ts` in Task 009B
+// (3일차) — it's a judgment function (D-026's collision-avoidance decision),
+// not palette data. See that file's module doc for the migration rationale
+// and `docs/CONVENTIONS.md` / `src/lib/rules/README.md` for the record.

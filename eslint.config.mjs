@@ -154,9 +154,25 @@ const eslintConfig = defineConfig([
   // src/lib/realtime/**와 대칭을 맞춘 것이다. 배럴(index.ts)이 mock/supabase 구현을 조립
   // import하는 것 자체가 이 배럴의 존재 이유이므로, 여기서 막으면 안 된다(1일차 교차검증 이슈).
   // mock↔supabase 상호 격리는 이 블록이 아니라 zone 2·3(각 서브폴더 전용 규칙)이 계속 담당한다.
+  //
+  // `src/components/**`는 `*.tsx`만 제외한다(`*.ts`는 제외하지 않는다) — zone 4·5가
+  // `src/components/**/*.tsx`(정확히는 그 하위 패턴들)만 매칭하므로, 예전처럼 여기서
+  // `src/components/**`를 통째로 제외하면 `components/` 아래의 `.tsx`가 아닌 `.ts` 파일
+  // (예: `components/shell/get-auth-session.ts`)이 zone 4·5·6 **어디에도 걸리지 않는
+  // 사각지대**가 생긴다 — 3일차 CREW가 프로브로 실측해 찾아낸 구멍이다. 이런 `.ts` 파일은
+  // `<Name>.tsx`/`<Name>Container.tsx` 명명 규약의 대상이 아니라(D-030 ①이 애초에 `.tsx`
+  // 표현/컨테이너 분리를 전제한다) "컴포넌트 트리 아래 있을 뿐인 일반 TS 모듈"이므로,
+  // `lib/actions`·`hooks`와 같은 이 zone(일반 규칙: Supabase 클라이언트·딥 임포트만 차단,
+  // `@/lib/data` 배럴은 허용)으로 떨어지는 것이 맞다 — 표현 컴포넌트 수준의 전면 차단
+  // (zone 4)을 씌울 근거가 없다.
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/lib/rules/**", "src/lib/data/**", "src/lib/realtime/**", "src/components/**"],
+    ignores: [
+      "src/lib/rules/**",
+      "src/lib/data/**",
+      "src/lib/realtime/**",
+      "src/components/**/*.tsx",
+    ],
     rules: {
       "no-restricted-imports": [
         "error",

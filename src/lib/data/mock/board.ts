@@ -1,0 +1,85 @@
+import type { Board, Id, Post, PostType } from "@/lib/types";
+
+import { type CursorPage, type DataResult, err, ok } from "../contracts";
+
+import { generateId, store } from "./fixtures";
+
+/** Board·Post 데이터 접근 (FR-030~032·034). Comment(FR-033)는 v0.2라 다루지 않는다. */
+
+export async function getBoardByCrewId(crewId: Id): Promise<Board | null> {
+  return store.boards.find((b) => b.crewId === crewId) ?? null;
+}
+
+export interface ListPostsQuery {
+  type?: PostType;
+  /** 이전 페이지 마지막 항목의 id. 그보다 오래된(작성일 기준) 게시글부터 반환한다. */
+  cursor?: Id | null;
+  limit?: number;
+}
+
+/** 게시글 목록(FR-031), 최신순, 커서 페이지네이션. 삭제된 게시글은 제외한다. */
+export async function listPosts(
+  boardId: Id,
+  opts: ListPostsQuery = {},
+): Promise<CursorPage<Post>> {
+  const limit = opts.limit ?? 20;
+  const all = store.posts
+    .filter((p) => p.boardId === boardId && !p.deletedAt && (!opts.type || p.type === opts.type))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  const startIndex = opts.cursor ? all.findIndex((p) => p.id === opts.cursor) + 1 : 0;
+  const page = all.slice(startIndex, startIndex + limit);
+  const nextCursor = all[startIndex + limit] ? page[page.length - 1].id : null;
+  return { items: page, nextCursor };
+}
+
+export async function getPostById(id: Id): Promise<Post | null> {
+  const post = store.posts.find((p) => p.id === id);
+  return post && !post.deletedAt ? post : null;
+}
+
+export interface CreatePostInput {
+  boardId: Id;
+  authorId: Id;
+  type: PostType;
+  title: string;
+  body: string;
+  /** type='meetup_proposal'일 때만 의미 있다(FR-034). */
+  meetupDate?: string | null;
+}
+
+export async function createPost(input: CreatePostInput): Promise<Post> {
+  const post: Post = {
+    id: generateId("post"),
+    boardId: input.boardId,
+    authorId: input.authorId,
+    type: input.type,
+    title: input.title,
+    body: input.body,
+    meetupDate: input.type === "meetup_proposal" ? (input.meetupDate ?? null) : null,
+    createdAt: new Date().toISOString(),
+    editedAt: null,
+    deletedAt: null,
+  };
+  store.posts.push(post);
+  return post;
+}
+
+export type UpdatePostInput = Partial<Pick<Post, "title" | "body">>;
+
+/** 게시글 수정(FR-032). `editedAt`을 갱신해 수정 표시 근거를 남긴다(D-035). */
+export async function updatePost(id: Id, patch: UpdatePostInput): Promise<DataResult<Post>> {
+  const post = store.posts.find((p) => p.id === id && !p.deletedAt);
+  if (!post) return err("not_found", `post ${id} 를 찾을 수 없다.`);
+  Object.assign(post, patch);
+  post.editedAt = new Date().toISOString();
+  return ok(post);
+}
+
+/** 게시글 삭제(FR-032). 소프트 삭제 — `deletedAt`만 채운다. */
+export async function deletePost(id: Id): Promise<DataResult<Post>> {
+  const post = store.posts.find((p) => p.id === id && !p.deletedAt);
+  if (!post) return err("not_found", `post ${id} 를 찾을 수 없다.`);
+  post.deletedAt = new Date().toISOString();
+  return ok(post);
+}

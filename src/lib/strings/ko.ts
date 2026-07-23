@@ -13,6 +13,10 @@
  *   같은 엔티티·같은 개념을 가리키므로 `common.post.deleted`를 함께 참조한다.
  */
 const common = {
+  /** Task 011(DESIGN) — 앱 셸 브랜드 표기(`<title>`, `HeaderNav` 로고 링크)용. 고유명사라
+   *  로케일이 늘어도 값은 바뀌지 않을 가능성이 높지만, NFR-023(문자열 하드코딩 금지)을
+   *  일관되게 지키기 위해 컴포넌트에 직접 쓰지 않고 여기 둔다. */
+  appName: "mo_im",
   actions: {
     confirm: "확인",
     cancel: "취소",
@@ -26,6 +30,14 @@ const common = {
     copy: "복사",
     copied: "복사되었습니다",
     goBack: "뒤로 가기",
+    /** Task 011(DESIGN) — AppShell 키보드 접근성 스킵 링크(NFR-020). */
+    skipToContent: "본문으로 바로가기",
+  },
+  /** Task 011(DESIGN) — 스크린 리더 전용 `aria-label` 문구. 화면에 그려지진 않지만 보조기술
+   *  사용자에게는 노출되는 문구라 NFR-023 대상으로 취급한다. */
+  a11y: {
+    primaryNav: "주 내비게이션",
+    accountNav: "계정 메뉴",
   },
   status: {
     loading: "불러오는 중…",
@@ -49,7 +61,6 @@ export const ko = {
 
   nav: {
     home: "홈",
-    crews: "내 크루",
     calendar: "캘린더",
     board: "게시판",
     chat: "채팅",
@@ -79,7 +90,7 @@ export const ko = {
     },
   },
 
-  /** SC-07~09, SC-14~15 크루 관련 페이지. `nav.crews`("내 크루")와는 의미가 달라 재사용하지 않는다. */
+  /** SC-07~09, SC-14~15 크루 관련 페이지. */
   crew: {
     explore: {
       title: "크루 검색·탐색",
