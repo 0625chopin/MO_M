@@ -21,6 +21,8 @@ Next.js 16.2.11(App Router) + React 19.2.4 + TypeScript(strict) + Tailwind CSS v
 
 - 경로 별칭: `@/*` → `./src/*`
 - React Compiler 활성화됨(`next.config.ts`의 `reactCompiler: true`, `babel-plugin-react-compiler` 사용). 수동 `useMemo`/`useCallback`/`memo`는 피한다. 메모이제이션은 컴파일러가 처리하며 수동 처리와 충돌할 수 있다.
+  - **예외 절차가 있다 (D-029)**: React 공식 문서는 `useMemo`/`useCallback`을 "**탈출구로 계속 사용할 수 있다**"고 명시하고, Next.js는 `"use no memo"` 디렉티브를 제공한다. **측정 근거(무엇이 몇 ms 느렸는지)를 주석이나 커밋 메시지에 남기면 예외를 허용한다.** 근거 없는 예외는 허용하지 않는다.
+  - 컴파일러는 **컴포넌트와 훅만** 메모이즈한다. 투표 판정·정족수·권한 판정·색 해시 같은 **React 비의존 순수 함수는 최적화 대상이 아니다.** 성능 목표(INP p75 ≤200ms)는 메모이제이션이 아니라 **렌더링 전략**(긴 목록 윈도잉, 안정적인 `key`, `startTransition`, 사전 인덱싱)으로 달성한다.
 - Tailwind v4는 CSS-first 방식으로 설정되어 `tailwind.config.*` 파일이 없다. 디자인 토큰은 `src/app/globals.css`의 `@theme inline` 블록에 있고, `:root`(라이트)와 `prefers-color-scheme: dark` 블록의 CSS 커스텀 프로퍼티와 연결된다. 테마 값 추가·변경은 JS 설정이 아니라 이 파일에서 한다.
 - 폰트는 `layout.tsx`에서 `next/font/google`(Geist / Geist Mono)로 로드하고, `--font-geist-sans` / `--font-geist-mono` CSS 변수로 노출되어 `@theme` 블록에서 소비된다.
 
@@ -37,7 +39,13 @@ Next.js 16.2.11(App Router) + React 19.2.4 + TypeScript(strict) + Tailwind CSS v
 
 ## 사용 가능한 MCP 서버
 
-`.mcp.json`에 설정된 서버: `supabase`(project ref `damruradpliktkrlkakl` — 백엔드로 의도되어 있으나 아직 클라이언트 코드 없음), `context7`(라이브러리 문서), `shadcn`(컴포넌트 레지스트리), `playwright`(브라우저 자동화), `serena`(시맨틱 코드 도구), `sequential-thinking`, `shrimp-task-manager`(상태는 `shrimp_data/`에 저장).
+`.mcp.json`에 설정된 서버: `supabase`(**⚠️ 아래 경고 참고**), `context7`(라이브러리 문서), `shadcn`(컴포넌트 레지스트리), `playwright`(브라우저 자동화), `serena`(시맨틱 코드 도구), `sequential-thinking`, `shrimp-task-manager`(상태는 `shrimp_data/`에 저장).
+
+> **⚠️ Supabase project ref 교체 필요 (D-018)**
+>
+> `.mcp.json`에 설정된 ref `damruradpliktkrlkakl`은 **mo_im의 것이 아니다.** 확인 결과 **다른 애플리케이션(축구 매니저 시뮬레이션)이 테이블 43개·마이그레이션 33건으로 점유** 중이며, `public.profile`·`public.audit_log`가 mo_im 계획과 이름이 충돌하고 `handle_new_user` 트리거가 **가입자마다 무관한 `wallet` 행을 생성**한다.
+>
+> mo_im은 **전용 프로젝트**를 쓴다. **ref를 교체하기 전에는 어떤 마이그레이션도 적용하지 말 것** — 타 앱 운영 DB가 손상된다(**R-018**). 적용 전에 `list_tables`가 0개인지 반드시 확인한다.
 
 ## 개발 원칙
 
@@ -59,6 +67,17 @@ Next.js 16.2.11(App Router) + React 19.2.4 + TypeScript(strict) + Tailwind CSS v
 - 화면 개발이 완료되면 Supabase Database를 설계 및 연결합니다.
 - Database 연결 후 실제 데이터를 생성하여 CRUD, 인증(Authentication), 권한(RLS)을 포함한 통합 테스트를 진행합니다.
 - 실제 데이터로 전환할 때 UI 컴포넌트는 수정하지 않고 **데이터 조회 부분만 교체**할 수 있도록 구현합니다.
+
+#### 전환 경계 네 가지 (D-030 — v0.1부터 지킵니다)
+
+위 "UI 무수정 교체" 원칙은 **읽기(서버 컴포넌트)와 쓰기(Server Action)에서는 성립하지만 실시간 경계에서는 성립하지 않습니다.** Realtime 구독은 클라이언트 컴포넌트 + 구독 생명주기 + 로컬 상태 병합을 요구하므로, Mock 단계에서 순수 표현 컴포넌트로만 만들면 전환 시 `'use client'` 전환과 상태 소유권 이동이 필요해집니다 — 정확히 이 원칙이 금지한 "UI 수정"입니다. 그래서 아래 넷을 처음부터 지킵니다.
+
+1. **표현/컨테이너를 분리합니다.** Mock 단계에도 컨테이너를 만듭니다. 표현 컴포넌트는 데이터를 props로만 받습니다.
+2. **구독을 인터페이스로 감쌉니다.** `subscribeToRoom(id, onEvent): Unsubscribe` 형태로 두어 Mock에서는 타이머를, 실데이터에서는 Supabase Realtime Broadcast를 꽂습니다.
+3. **`/sample` 4상태의 "오류"에 도메인 오류를 포함합니다.** 네트워크 실패뿐 아니라 RLS 403·정원 마감·동시 수정 충돌을 상태로 만듭니다.
+4. **인증 경계는 레이아웃에서 처리합니다.** `proxy.ts`는 D-011로 v0.1 범위 밖입니다.
+
+쓰기 후 갱신은 **Server Action + `refresh()`** 패턴을 Mock 단계부터 씁니다. Next.js 16의 `updateTag`·`refresh()` 가 정확히 이 전환 시나리오를 위한 API라 나중에 조회부만 바꾸면 됩니다.
 
 #### 다국어 (D-011 — 이전 지침에서 바뀐 부분)
 

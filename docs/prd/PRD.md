@@ -2,7 +2,7 @@
 
 ## 0. 문서 출처와 경계 (반드시 읽을 것)
 
-- 이 PRD는 **`docs/requirements/requirements.md`(1~5절, FR 54건·NFR 41건·SC-01~22)** 와 **`docs/prioritization-and-risks.md`(6.1 우선순위·6.2 리스크·6.3 결정 D-001~D-014)** 에서 **파생**됐다. 두 문서가 요구사항·우선순위·결정의 **단일 소스**이며, 이 PRD와 원본이 어긋나면 **원본이 이긴다.**
+- 이 PRD는 **`docs/requirements/requirements.md`(1~5절, FR 54건·NFR 41건·SC-01~22)** 와 **`docs/prioritization-and-risks.md`(6.1 우선순위·6.2 리스크·6.3 결정 D-001~D-036)** 에서 **파생**됐다. 두 문서가 요구사항·우선순위·결정의 **단일 소스**이며, 이 PRD와 원본이 어긋나면 **원본이 이긴다.**
 - 이 PRD는 **개발자가 화면·기능 단위로 바로 착수**할 수 있도록 원본을 재구성한 요약본이다. FR의 사전조건·예외흐름·수용기준(Given-When-Then) 전문은 담지 않으며, 필요 시 반드시 원본 FR 번호로 돌아가 확인한다.
 - **MVP 범위 = `prioritization-and-risks.md` 6.1절의 릴리스 `v0.1` 대상 FR 39건**이다(등급 M 36건 + 등급이지만 v0.1로 확정된 S 3건: FR-032·FR-064·FR-068). 이 39건은 고객이 이미 확정한 범위이며, 이 문서에서 임의로 더 줄이지 않았다.
 - **저장소 현재 상태**: `src/app/{layout,page}.tsx`, `globals.css`, `favicon.ico` 4개 파일뿐이다. 아래 모든 페이지·컴포넌트·`/sample`·데이터 레이어는 **이번 PRD가 만들 대상**이며 현재 존재하지 않는다.
@@ -178,7 +178,7 @@
 | --- | --- | --- | --- | :-: | --- | --- |
 | F016 | FR-030 | 게시글 작성 | 일반글/모임 제안글 작성 | M | 원문 №6 "커뮤니티에 등록"의 전제 | 글쓰기 페이지 |
 | F017 | FR-031 | 게시글 목록·상세 조회 | 목록 페이지네이션 + 상세 열람 | M | 작성만 있고 조회가 없으면 게시판이 성립하지 않음 | 커뮤니티 게시판 페이지, 게시글 상세 페이지 |
-| F018 | FR-032 | 게시글 수정·삭제 | 작성자 수정, 임원·오너의 타인 글 삭제 | **S**(v0.1) | 재작성으로 우회 가능하나 구현 비용이 낮고, 투표 시작 후 제안글의 날짜·조건 잠금 규칙이 여기 붙음 | 게시글 상세 페이지 |
+| F018 | FR-032 | 게시글 수정·삭제 | 작성자 수정, 임원·오너의 타인 글 삭제 | **S**(v0.1) | 재작성으로 우회 가능하나 구현 비용이 낮다. ("투표 시작 후 잠금"은 근거가 되지 않는다 — 투표는 제안글과 **동시에** 생성되므로 잠금이 무조건적이다) | 게시글 상세 페이지 |
 | F019 | FR-034 | 모임 제안글 | 날짜·투표기한(+선택: 시각·장소·정원) 입력, 등록 시 투표 자동 생성 | M | 원문 №6·№9의 핵심 대상, Meetup의 유일한 생성 경로 | 글쓰기 페이지 |
 
 #### 투표
@@ -463,7 +463,9 @@
 | **접근 조건** | 로그인 회원(본인 소속 크루만) |
 | **진입 경로** | 헤더 "캘린더", 홈 대시보드 캘린더 요약 클릭 |
 | **사용자 행동** | 월 이동, 크루 필터로 표시 대상 좁히기, 날짜/바 클릭해 상세 패널 열람 |
-| **주요 기능** | • 월간 격자 + 날짜별 크루 색 Meetup 바(같은 날짜 4건 이상은 "+N개")<br>• 크루 필터(선택 상태는 다음 방문까지 유지) — 소속 크루 12개 초과 시 색 중복이 불가피하므로 필수(D-014·R-017)<br>• 날짜/바 클릭 → 상세 패널(조회 전용, 데이터 생성 없음, D-012)<br>• 상세 패널 항목 클릭 → Meetup 상세로 이동 |
+| **주요 기능** | • 월간 격자 + 날짜별 크루 색 Meetup 바(같은 날짜 4건 이상은 "+N개")<br>• 크루 필터(선택 상태는 다음 방문까지 유지) — 소속 크루 12개 초과 시 색 중복이 불가피하므로 필수(D-014·R-017)<br>• 상세 패널 항목 클릭 → Meetup 상세로 이동 |
+| **캘린더 클릭 동작** | 날짜·바 클릭은 **조회 전용이며 데이터를 생성하지 않는다**(D-012). 이는 F033(상세 목록 표시)에 한한 규칙이다 |
+| **패널 안의 참석 응답** | 상세 패널에서 F035(참석/불참)를 실행할 수 있다. **이는 사용자가 버튼을 명시적으로 누른 결과이므로 위의 "조회 전용"과 모순되지 않는다** — 조회 전용인 것은 *클릭으로 패널을 여는 동작*이다 |
 | **구현 기능 ID** | F030, F031, F032, F033, F035 |
 | **다음 이동** | Meetup 상세 페이지 |
 
@@ -530,8 +532,16 @@
 | handle | 공개 검색용 핸들(이메일과 분리) |
 | displayName | 표시 이름 |
 | avatarUrl | 아바타 이미지 |
+| **bio / status** | 자기소개·계정 상태 (D-035) |
 | searchOptOut | 핸들 검색 노출 여부 |
 | anonymizedAt | 탈퇴 익명화 시각(D-010, v0.2 대상) |
+
+**AuthAttempt** *(D-020 — v0.2 대상)*
+| 필드 | 설명 |
+| --- | --- |
+| identifier / attemptedAt / succeeded | 로그인 시도 기록 |
+
+> Supabase Auth의 레이트 리밋은 IP·프로젝트 단위라 FR-002 AC4의 "자격 증명이 맞아도 거부"를 표현할 수 없다. **계정 단위 잠금을 자체 구현**한다. 클라이언트는 이 테이블에 접근하지 않는다.
 
 ### 크루·멤버십
 
@@ -579,6 +589,7 @@
 | type | `general` \| `meetup_proposal` |
 | title / body | 제목·본문 |
 | meetupDate | 모임 예정일(제안글만) |
+| **createdAt / editedAt** | 작성·수정 시각. FR-032 AC1의 수정 표시가 `editedAt`을 요구한다(D-035) |
 | deletedAt | 삭제 시각(익명화 정책 D-010 연계) |
 
 **Comment**(FR-033, v0.2 대상 — 데이터 모델만 선반영) — id, postId, authorId, parentId, body
@@ -590,9 +601,19 @@
 | --- | --- |
 | id / postId | 투표 식별자·연결된 제안글 |
 | opensAt / closesAt | 시작·마감 시각 |
-| quorumRatio | 정족수 비율(1/3, D-003) |
-| eligibleSnapshot | 투표 생성 시각 대상자 명단 스냅샷 |
 | status | `open`/`closed_passed`/`closed_rejected`/`closed_invalid`/`cancelled` |
+| **closedBy / result** | 종료 주체·판정 결과 (FR-043 AC3 — D-035) |
+| **decidedAt** | **판정 완료 시각.** FR-045 AC2의 "5초"는 이 시각이 t=0이다(D-024) |
+
+> `quorumRatio` 컬럼은 **두지 않는다** — D-003이 1/3 고정이므로 컬럼이 설정 가능성을 잘못 암시한다(**D-032**). 정족수는 `ceil(대상자 수 / 3)` 상수 규칙이다.
+
+**PollEligibleVoter** *(D-025 — 배열 컬럼 `eligibleSnapshot`을 대체)*
+| 필드 | 설명 |
+| --- | --- |
+| pollId / profileId | 투표 생성 시각의 대상자 스냅샷 (PK) |
+| notifiedAt / notifyAttempts | 종료 알림 발송 시각·재시도 횟수 (D-015, NFR-029) |
+
+> 배열 컬럼으로는 **대상자별 상태**를 담을 수 없다 — D-015(강퇴자 제외 발송)·NFR-029(재시도)·FR-042(미투표 수)·D-022(현재 투표 가능 여부)가 전부 이를 요구한다.
 
 **PollVote**
 | 필드 | 설명 |
@@ -607,9 +628,11 @@
 | 필드 | 설명 |
 | --- | --- |
 | id / crewId / pollId | Meetup 식별자·소속 크루·근거 투표 |
+| **title / description** | 제목·설명 (FR-064 AC1이 상세 표시를 요구 — D-035) |
 | date | 모임 예정일(필수) |
 | startTime / place / capacity | 시각·장소·정원(선택, D-013) |
-| status | `scheduled` \| `cancelled` |
+| **attendingCount** | 참석 확정 인원. **정원 판정은 이 컬럼의 조건부 UPDATE로 원자성을 보장한다**(D-019) |
+| status | **`confirmed`** \| `cancelled` (D-034 — FR-066 사전조건이 참조하는 값) |
 
 **MeetupAttendance** *(D-013 신규)*
 | 필드 | 설명 |
@@ -617,6 +640,7 @@
 | meetupId / profileId | 대상 Meetup·응답자 |
 | status | `attending` \| `absent` |
 | respondedAt | 응답 시각 |
+| **UNIQUE(meetupId, profileId)** | FR-067 E2 멱등성의 전제 (D-019) |
 
 ### 채팅
 
@@ -653,22 +677,40 @@
 
 ## 8. 기술 스택
 
-`package.json` 실측 버전을 그대로 사용한다(자체 판단으로 다운그레이드/업그레이드하지 않음).
+**설치된 것과 도입 예정을 구분해 적는다**(D-036). 한 목록에 섞으면 전부 준비된 것처럼 읽혀 착수 시 잘못된 전제가 된다. 항목을 추가할 때 어느 구획인지 밝히지 않으면 등재하지 않는다.
 
-### 프론트엔드 프레임워크
-- **Next.js 16.2.11**(App Router, Turbopack이 dev·build 기본 번들러, React Compiler 활성화 — 수동 `useMemo`/`useCallback`/`memo` 사용 금지)
-- **React 19.2.4**
-- **TypeScript**(strict) — 경로 별칭 `@/*` → `./src/*`
+### 8.1 이미 설치됨 (`package.json` 실측)
 
-### 스타일링
-- **Tailwind CSS v4**(CSS-first, `tailwind.config.*` 없음, 디자인 토큰은 `src/app/globals.css`의 `@theme inline`에 라이트/다크 쌍으로 정의 — 캘린더 12색 팔레트 포함)
+런타임 의존성은 **세 개뿐**이다.
 
-### 백엔드·인프라
-- **Supabase**(project ref `damruradpliktkrlkakl`) — 인증, PostgreSQL, Realtime 구독(채팅·투표·알림)
-- **Vercel** 배포
+- **Next.js 16.2.11** — App Router, Turbopack이 dev·build 기본 번들러, React Compiler 활성화(`reactCompiler: true`)
+- **React 19.2.4** / **react-dom 19.2.4**
+- **TypeScript**(strict, 개발 의존성) — 경로 별칭 `@/*` → `./src/*`
+- **Tailwind CSS v4**(개발 의존성) — CSS-first, `tailwind.config.*` 없음. 토큰은 `src/app/globals.css`의 `@theme inline`
 
-### 개발 방법론
-- **Mock First**: 모든 컴포넌트는 `/sample` 쇼케이스(4상태: 정상/로딩/빈 상태/에러)에 먼저 등록하고, Mock 데이터로 화면을 완성한 뒤 Supabase를 연결한다. Mock과 실데이터는 동일 TypeScript 타입을 공유한다(7절).
+> **`globals.css`에 캘린더 12색 팔레트는 아직 없다.** 현재 토큰은 background/foreground/폰트뿐이다(CON-04 대상, D-026으로 색값 결정 방식만 확정).
+
+### 8.2 도입 예정 (아직 의존성에 없음)
+
+| 항목 | 용도 | 시점 | 근거 |
+| --- | --- | --- | --- |
+| **Supabase JS 클라이언트** | 인증·DB·Realtime | v0.2 | CON-01 |
+| **shadcn/ui** | 컴포넌트 기반 (MCP는 이미 설정됨) | v0.1 | 공통 기반 48인일 중 10~15인일 단축 여지 |
+| **커스텀 SMTP 공급자** | 인증 메일 발송 | v0.2 | **D-021** — 공급자 미정(**I-016**) |
+
+### 8.3 백엔드·인프라
+
+- **Supabase** — 인증, PostgreSQL, **Realtime Broadcast**(D-023)
+  - ⚠️ **project ref 교체 필요.** `.mcp.json`의 기존 ref `damruradpliktkrlkakl`은 **다른 애플리케이션(축구 매니저 시뮬레이션)이 테이블 43개·마이그레이션 33건으로 점유** 중이다. mo_im은 **전용 프로젝트**를 쓴다(**D-018**). 교체를 놓친 채 마이그레이션을 적용하면 타 앱 운영 DB를 오염시킨다(**R-018**).
+  - **요금제 미확정**(**I-017**) — NFR-006의 1,000세션은 Pro + 지출 상한 해제 이상을 전제한다(Free 200 / Pro 500).
+- **스케줄 실행: Supabase Cron(pg_cron)** — 투표 자동 종료(D-003)와 채팅 12개월 파기(D-009)에 쓴다. **Vercel Cron은 쓰지 않는다**(Hobby는 하루 1회·±59분이며 더 잦은 표현식은 배포가 실패한다). 동시 잡 8개·잡당 10분 이내 (**D-027**)
+- **Vercel** — 배포 (스케줄 용도로는 쓰지 않는다)
+
+### 8.4 개발 방법론
+
+- **Mock First**: 모든 컴포넌트는 `/sample` 쇼케이스(4상태: 정상/로딩/빈 상태/오류)에 먼저 등록하고, Mock 데이터로 화면을 완성한 뒤 Supabase를 연결한다. Mock과 실데이터는 동일 TypeScript 타입을 공유한다(7절).
+- **전환 경계 4개를 v0.1부터 지킨다**(**D-030**) — ① 표현/컨테이너 분리(Mock에도 컨테이너를 만든다) ② `subscribeToRoom(id, onEvent): Unsubscribe` 구독 인터페이스 추상화 ③ 4상태 "오류"에 **도메인 오류**(RLS 403·정원 마감·동시 수정 충돌) 포함 ④ 인증 경계는 **레이아웃**에서 처리(`proxy.ts`는 D-011로 범위 밖). Server Action + `refresh()` 패턴을 Mock 단계부터 쓴다.
+- **React Compiler**: 수동 `useMemo`/`useCallback`/`memo`를 쓰지 않되, **측정 근거를 기록하면 `"use no memo"` 예외를 허용한다**(**D-029**). INP 목표는 메모이제이션이 아니라 **렌더링 전략**(윈도잉·`startTransition`·안정적인 `key`)으로 달성한다.
 
 ---
 
