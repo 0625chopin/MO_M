@@ -17,13 +17,17 @@ npm run lint     # ESLint(flat config). `next lint`가 아니라 순수 `eslint`
 
 ## 스택과 현재 상태
 
-Next.js 16.2.11(App Router) + React 19.2.4 + TypeScript(strict) + Tailwind CSS v4. 현재 저장소는 `create-next-app` 스캐폴드 그대로다. `src/app/{layout,page}.tsx`, `src/app/globals.css`와 설정 파일들만 있고 `lib/`, `components/`, API 라우트, 데이터 레이어는 아직 없다. 즉 해당 구조에 대한 컨벤션은 아직 정해지지 않은 상태다.
+Next.js 16.2.11(App Router) + React 19.2.4 + TypeScript(strict) + Tailwind CSS v4. 공통 기반 계층이 놓인 상태다 — `src/lib/`가 `types`·`data/{mock,supabase}`·`rules`·`realtime`·`actions`·`strings`로 계층화됐고, `src/components/ui/`(shadcn/ui)·`src/hooks/`가 있다. **디렉터리 구조·명명 규약의 단일 소스는 `docs/CONVENTIONS.md`이며, 그 경계는 `eslint.config.mjs`의 import zone 규칙으로 강제된다.** 다만 화면(`src/app/*` 라우트)·데이터 접근 구현(Mock/Supabase)·`/sample` 쇼케이스는 아직 대부분 미구현이다. 실제 API 라우트와 실데이터 연결은 Mock First가 끝난 뒤 단계다.
+
+- 컴포넌트 기반은 **shadcn/ui**를 도입했다(`components.json`, Base UI 프리미티브). 도입 근거·주의는 `docs/decisions/shadcn-ui-adoption.md` 참고.
 
 - 경로 별칭: `@/*` → `./src/*`
 - React Compiler 활성화됨(`next.config.ts`의 `reactCompiler: true`, `babel-plugin-react-compiler` 사용). 수동 `useMemo`/`useCallback`/`memo`는 피한다. 메모이제이션은 컴파일러가 처리하며 수동 처리와 충돌할 수 있다.
   - **예외 절차가 있다 (D-029)**: React 공식 문서는 `useMemo`/`useCallback`을 "**탈출구로 계속 사용할 수 있다**"고 명시하고, Next.js는 `"use no memo"` 디렉티브를 제공한다. **측정 근거(무엇이 몇 ms 느렸는지)를 주석이나 커밋 메시지에 남기면 예외를 허용한다.** 근거 없는 예외는 허용하지 않는다.
   - 컴파일러는 **컴포넌트와 훅만** 메모이즈한다. 투표 판정·정족수·권한 판정·색 해시 같은 **React 비의존 순수 함수는 최적화 대상이 아니다.** 성능 목표(INP p75 ≤200ms)는 메모이제이션이 아니라 **렌더링 전략**(긴 목록 윈도잉, 안정적인 `key`, `startTransition`, 사전 인덱싱)으로 달성한다.
-- Tailwind v4는 CSS-first 방식으로 설정되어 `tailwind.config.*` 파일이 없다. 디자인 토큰은 `src/app/globals.css`의 `@theme inline` 블록에 있고, `:root`(라이트)와 `prefers-color-scheme: dark` 블록의 CSS 커스텀 프로퍼티와 연결된다. 테마 값 추가·변경은 JS 설정이 아니라 이 파일에서 한다.
+- Tailwind v4는 CSS-first 방식으로 설정되어 `tailwind.config.*` 파일이 없다. 디자인 토큰은 `src/app/globals.css`의 `@theme inline` 블록에 있고, `:root`(라이트)의 CSS 커스텀 프로퍼티와 연결된다. 테마 값 추가·변경은 JS 설정이 아니라 이 파일에서 한다.
+  - **다크모드는 `.dark` 클래스 variant가 기본 기제다**(shadcn 표준: `@custom-variant dark (&:is(.dark *))`). 사용자가 명시 선택을 하기 전 기본 상태에서 OS 다크를 따라가도록 `@media (prefers-color-scheme: dark)` 폴백이 `.dark`와 **동일한 뉴트럴 토큰 값**을 미러링한다 — 두 곳의 값은 함께 고쳐 동기화한다. 명시적 테마 토글(ThemeProvider)은 아직 없다(앱 셸 Task 011로 이월, `docs/ISSUES.md` 참고).
+  - 캘린더 크루 12색 팔레트(`--crew-1`..`--crew-12`)는 **라이트·다크 단일값**이라 `.dark`·폴백에서 재정의하지 않는다(D-026 근거). 대비·CVD 검토 근거는 `docs/design/calendar-palette.md`, 접근 모듈은 `src/lib/crew-palette.ts`.
 - 폰트는 `layout.tsx`에서 `next/font/google`(Geist / Geist Mono)로 로드하고, `--font-geist-sans` / `--font-geist-mono` CSS 변수로 노출되어 `@theme` 블록에서 소비된다.
 
 ## 기존 습관과 달라진 Next.js 16 사항
@@ -49,12 +53,16 @@ Next.js 16.2.11(App Router) + React 19.2.4 + TypeScript(strict) + Tailwind CSS v
 
 ## 개발 원칙
 
-> 이 절은 **앞으로 지킬 규칙**을 기술한다. 아래에 나오는 소스 경로(`src/app/sample/`, 컴포넌트, 데이터 레이어)는 **아직 하나도 존재하지 않는다** — 저장소는 `create-next-app` 스캐폴드 그대로다(위 "스택과 현재 상태" 참고). 규칙은 그 경로를 **만들 때** 적용된다.
+> 이 절은 **앞으로 지킬 규칙**을 기술한다. 공통 기반 계층(`src/lib/*` 경계·`src/components/ui`·디자인 토큰·문자열 모듈)은 이미 놓였지만, 아래에 나오는 화면 경로(`src/app/sample/`, 도메인 화면 컴포넌트)와 데이터 접근 **구현**은 아직 대부분 없다(위 "스택과 현재 상태" 참고). 규칙은 그 경로를 **만들 때** 적용된다.
 >
-> 실재하는 것은 `docs/` 뿐이다 — `docs/requirements/requirements.md`(요구사항 1~5절, FR/NFR 정의), `docs/prioritization-and-risks.md`(6절 우선순위·리스크 R-\*·결정 D-\*), `docs/ISSUES.md`(미결 이슈 I-\*). **기능을 구현하기 전에 요구사항 문서의 해당 FR과 6.3절 결정을 먼저 읽는다.**
+> 참조 문서 — `docs/requirements/requirements.md`(요구사항 1~5절, FR/NFR 정의), `docs/prioritization-and-risks.md`(6절 우선순위·리스크 R-\*·결정 D-\*), `docs/ISSUES.md`(미결 이슈 I-\*), `docs/CONVENTIONS.md`(디렉터리·명명 규약 단일 소스). **기능을 구현하기 전에 요구사항 문서의 해당 FR과 6.3절 결정, 그리고 `docs/CONVENTIONS.md`를 먼저 읽는다.**
 
 ### 화면 우선 개발 (Mock First Development)
 
+- **UI는 shadcn/ui 컴포넌트로 조립하고, 시각 설계는 `frontend-design` 스킬을 먼저 읽고 시작합니다.**
+  - 새 UI 요소가 필요하면 **직접 만들기 전에 `shadcn` MCP 레지스트리에서 먼저 찾습니다**(`search_items_in_registries` → `view_items_in_registries` → `get_add_command_for_items`). 레지스트리에 있는 것을 손으로 다시 짜면 접근성 처리와 다크모드 토큰 연결을 매번 새로 검증해야 합니다. 없을 때만 `src/components/ui/`의 기존 프리미티브를 조합해 만듭니다.
+  - 화면을 새로 만들거나 기존 화면의 인상을 바꾸는 작업은 **`frontend-design` 스킬을 먼저 호출**해 미적 방향·타이포그래피 기준을 잡고 시작합니다. 기본값을 그대로 쓴 "템플릿처럼 보이는" 화면을 피하기 위한 절차입니다.
+  - 색·간격·폰트는 임의 값을 쓰지 않고 `globals.css`의 `@theme inline` 디자인 토큰을 씁니다(다크모드 대응이 토큰에 걸려 있습니다).
 - 화면은 모두 component 단위로 만듭니다.
 - 화면의 모든 컴포넌트는 `http://localhost:3000/sample`에 보이도록 배치합니다.
   - 쇼케이스는 `src/app/sample/page.tsx`에 만듭니다. 카테고리 섹션 + 앵커 내비 구조로 두고, **컴포넌트를 새로 만들 때마다 여기 등록**합니다. 등록을 미루면 쇼케이스가 곧 실제 컴포넌트 목록과 어긋나 존재 의의를 잃습니다.

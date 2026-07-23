@@ -1,26 +1,359 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
+
+/* ══════════════════════════════════════════════════════════════════════════
+   mo_im 디자인 언어 — "잉크와 확정성"
+
+   전체 근거·수치는 `docs/design/design-language.md`. 요약하면 규칙은 둘이다.
+
+   ① **채도는 데이터만 쓴다.** 화면의 유채색은 크루 12색(`--crew-*`)이 전부
+      가져간다. UI 크롬(버튼·경계·텍스트·포커스)은 채도 0.02 이하의 잉크
+      뉴트럴로 물러난다 — 크롬이 유채색을 쓰면 "이건 어느 크루 색이지?"라는
+      오독이 생긴다. shadcn 기본값의 순수 무채(`oklch(x 0 0)`)와 다른 점은
+      미세한 청색 색조(H=258)이며, 배경만은 아래 ② 때문에 무채로 남는다.
+
+   ② **배경·카드 표면의 밝기는 재량이 아니다.** 크루 12색은
+      `docs/design/calendar-palette.md`가 라이트 `oklch(1 0 0)` / 다크
+      `oklch(0.145 0 0)` 배경 기준으로 3:1(NFR-018)을 검증한 값이고, 최저치가
+      3.26이라 여유가 거의 없다. 그래서:
+        · `--background`는 라이트·다크 모두 **무채·기존 밝기 그대로** 둔다.
+        · `--card`도 라이트는 흰색을 유지한다(크루 칩이 놓이는 표면).
+        · **`--muted`/`--secondary`/`--accent` 위에는 크루색을 놓지 않는다.**
+          실측: `oklch(0.97)` 표면에서 crew-3(pink)·crew-6(periwinkle)이
+          2.99로 3:1을 깬다. 이건 원래부터 있던 함정이라 여기 규칙으로 박는다.
+   ══════════════════════════════════════════════════════════════════════════ */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+
+  /* 한국어가 제품 언어다(D-011). Geist에는 한글 글리프가 없어 개편 전까지 모든
+     한글이 OS 폴백(맑은 고딕/Apple SD Gothic)으로 렌더됐고, 자간·굵기가 기기마다
+     달랐다. Noto Sans KR은 한글 본문 가독이 검증된 얼굴이고 **가변 폰트**라
+     굵기를 자유롭게 쓸 수 있다(근거·실측은 `layout.tsx` 주석 참고).
+     제목은 별도 패밀리를 더하지 않고 같은 얼굴의 600 + 음수 트래킹으로 세운다 —
+     대신 아래 mono가 "데이터의 얼굴" 역할을 맡아 위계를 만든다. */
+  --font-sans: var(--font-sans-kr);
+  --font-heading: var(--font-sans-kr);
+  /* 이 앱은 시각·날짜·정족수·득표수가 화면의 뼈대다(FR-020~025, FR-062). mono는
+     코드 블록용이 아니라 **수·시각의 서체**로 격상해서 쓴다. 세로로 쌓인 숫자가
+     자릿수마다 흔들리지 않도록 `tabular-nums`(아래 `.tnum`)와 함께 쓴다.
+
+     **한글이 섞인 문자열에는 쓰지 않는다.** Geist Mono에는 한글 글리프가 없어
+     OS 폰트로 폴백되고, 한 줄 안에서 서체가 갈린다("8월 14일"의 숫자와 한글이
+     서로 다른 얼굴이 된다). 한글이 섞이면 sans + `.tnum`을 쓴다 — 자릿수 정렬은
+     그것만으로 얻어지고, 서체는 하나로 남는다. */
   --font-mono: var(--font-geist-mono);
+
+  /* 한글 조판 기본값. 한글은 라틴보다 글자틀이 꽉 차 같은 행간에서 더 답답해
+     보이므로 본문 행간을 넉넉히 잡고, 제목은 음수 트래킹으로 조인다. */
+  --leading-body: 1.7;
+  --tracking-display: -0.022em;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* ── mo_im Task 002 — Crew calendar 12-color palette ──────────────────
+     CON-04 / D-026 / D-006 / FR-062. One set of 12 colors covers BOTH
+     light and dark (D-026 §"단일 팔레트 한 벌로 라이트·다크 양쪽이 통과") —
+     that's why there's no --color-crew-N override under `.dark` below.
+     Index order is NOT hue order. It's a greedy farthest-point ordering
+     over deuteranopia(2형)-simulated CIEDE2000 distance, so that
+     index i -> index i+1 (mod 12) — the walk FR-062 AC3's same-day
+     collision rule uses — is close to perceptually-maximal, not just
+     "the next array slot". Do not reorder without re-running the
+     derivation script (see docs/design/calendar-palette.md, which also
+     has the full contrast table, the CVD delta-E matrix, and the pairs
+     that stay hard to tell apart under CVD — those are why NFR-019's
+     text-label + aria-label requirement is treated as unbreakable at
+     every call site, not covered by this file). */
+  --color-crew-1: var(--crew-1);
+  --color-crew-2: var(--crew-2);
+  --color-crew-3: var(--crew-3);
+  --color-crew-4: var(--crew-4);
+  --color-crew-5: var(--crew-5);
+  --color-crew-6: var(--crew-6);
+  --color-crew-7: var(--crew-7);
+  --color-crew-8: var(--crew-8);
+  --color-crew-9: var(--crew-9);
+  --color-crew-10: var(--crew-10);
+  --color-crew-11: var(--crew-11);
+  --color-crew-12: var(--crew-12);
+
+  /* 크루색을 **채웠을 때** 그 위에 얹는 글자색. 확정 상태(아래 `certainty-*`)가
+     크루색을 배경으로 쓰는 순간 필요해지는 값이라 개편에서 새로 넣었다.
+     12색의 상대휘도가 0.1365~0.2725에 걸쳐 있어 한 가지 글자색으로는 본문
+     4.5:1을 맞출 수 없다 — 실측상 경계는 Y=0.175(paper 하한)와 Y=0.183(ink
+     하한)이고, 다행히 팔레트에는 그 사이에 걸친 색이 없다. 어느 쪽을 쓸지는
+     `src/lib/crew-palette.ts`의 `textOn` 필드가 색마다 지정한다.
+     크루색 자체가 라이트·다크 단일값이므로(D-026) 이 둘도 단일값이다 —
+     `.dark`에서 재정의하지 않는다. */
+  --color-crew-text-ink: var(--crew-text-ink);
+  --color-crew-text-paper: var(--crew-text-paper);
 }
 
+/* ── 확정성 스케일 (개편 시그니처) ────────────────────────────────────────
+   이 제품의 한 줄은 "채팅에 묻힌 약속을 투표로 확정해 캘린더에 남긴다"이다.
+   그 서사를 **채도**에 실었다 — 확실할수록 색이 찬다. 캘린더 셀·투표 카드·
+   Meetup 배지·알림이 전부 같은 세 단계를 쓴다.
+
+     draft      제안·투표 중       점선 · 무채       "아직 아무것도 아니다"
+     pending    정족수 충족, 판정 대기  실선 · 크루색 12% "굳어지는 중"
+     confirmed  가결·확정          크루색 채움        "달력에 박혔다"
+
+   호출부는 `--crew-color`(칠할 색)와 `--crew-text`(그 위 글자색)를 인라인
+   스타일로 넘긴다. 두 값 모두 `getCrewColor(i)`가 돌려준다.
+   `--crew-color`가 없으면 무채로 폴백해 크루 맥락 밖에서도 안전하다. */
+@utility certainty-draft {
+  border: 1px dashed var(--crew-color, var(--border));
+  background-color: transparent;
+  color: var(--muted-foreground);
+}
+@utility certainty-pending {
+  border: 1px solid var(--crew-color, var(--border));
+  background-color: color-mix(in oklab, var(--crew-color, var(--muted)) 12%, transparent);
+  color: var(--foreground);
+}
+@utility certainty-confirmed {
+  border: 1px solid transparent;
+  background-color: var(--crew-color, var(--foreground));
+  color: var(--crew-text, var(--background));
+}
+
+/* 수·시각 전용. `--font-mono`와 함께 쓴다 — 세로로 쌓인 득표수·시각이
+   자릿수마다 흔들리지 않게 한다. */
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+:root {
+  /* 무채·불변 — 위 ② 참고. 크루 팔레트 대비 검증의 기준면이다. */
+  --background: oklch(1 0 0);
+  /* 흰색 유지 — 크루 칩이 놓여도 되는 두 표면 중 하나다. */
+  --card: oklch(1 0 0);
+  --popover: oklch(1 0 0);
+
+  /* 잉크 뉴트럴(H=258). 괄호 안은 흰 배경 대비 실측값. */
+  --foreground: oklch(0.16 0.014 258); /* 19.41 */
+  --card-foreground: oklch(0.16 0.014 258);
+  --popover-foreground: oklch(0.16 0.014 258);
+  --primary: oklch(0.24 0.022 258);
+  --primary-foreground: oklch(0.985 0.003 258);
+  --secondary: oklch(0.966 0.005 258);
+  --secondary-foreground: oklch(0.24 0.022 258);
+  --muted: oklch(0.966 0.005 258);
+  /* 5.28 — 기존 무채 `oklch(0.556 0 0)`(4.73)보다 오히려 여유가 늘었다.
+     보조 문구도 본문 기준 4.5:1을 지켜야 해서(NFR-018) 한 단계 조였다. */
+  --muted-foreground: oklch(0.53 0.016 258);
+  --accent: oklch(0.95 0.008 258);
+  --accent-foreground: oklch(0.24 0.022 258);
+  /* 6.15 — 기존 `oklch(0.577 0.245 27.325)`는 4.76으로 4.5:1을 겨우 넘겼다.
+     `text-destructive`로 본문에 직접 쓰이는 색이라 여유를 뒀다. */
+  --destructive: oklch(0.52 0.21 27);
+  --border: oklch(0.9 0.007 258);
+  --input: oklch(0.88 0.009 258);
+  /* 7.43 — **기존 `oklch(0.708 0 0)`은 흰 배경 대비 2.59로 3:1 미달이었다.**
+     포커스 표시자는 WCAG 2.2(2.4.11)·NFR-020의 대상이라 개편에서 고쳤다.
+     크루 파랑(crew-9 `#007af5`)과 혼동되지 않도록 채도는 0.02로 묶고 명도로만
+     드러낸다. 다크는 배경이 뒤집히므로 아래에서 밝은 값으로 따로 준다. */
+  --ring: oklch(0.45 0.02 258);
+  /* 차트는 v0.1 화면에 없지만 shadcn 표준 토큰이라 잉크 스케일로 맞춰 둔다.
+     차트가 생기면 크루색이 아니라 이 스케일을 쓴다 — 크루색은 크루 식별 전용이다. */
+  --chart-1: oklch(0.86 0.01 258);
+  --chart-2: oklch(0.7 0.014 258);
+  --chart-3: oklch(0.55 0.018 258);
+  --chart-4: oklch(0.4 0.02 258);
+  --chart-5: oklch(0.27 0.02 258);
+  /* 0.625rem → 0.5rem. 캘린더 셀·크루 칩·투표 행처럼 작고 촘촘한 요소가 화면의
+     주역이라, 기본값의 둥근 모서리는 밀도를 흐린다. 파생 반경(`--radius-sm`~`4xl`)이
+     전부 이 값의 배수라 여기 하나만 바꾸면 전체가 따라온다. */
+  --radius: 0.5rem;
+  --sidebar: oklch(0.985 0.003 258);
+  --sidebar-foreground: oklch(0.16 0.014 258);
+  --sidebar-primary: oklch(0.24 0.022 258);
+  --sidebar-primary-foreground: oklch(0.985 0.003 258);
+  --sidebar-accent: oklch(0.95 0.008 258);
+  --sidebar-accent-foreground: oklch(0.24 0.022 258);
+  --sidebar-border: oklch(0.9 0.007 258);
+  --sidebar-ring: oklch(0.45 0.02 258);
+
+  /* 크루색 채움 위 글자색 — 라이트·다크 단일값(`@theme inline` 주석 참고). */
+  --crew-text-ink: oklch(0.16 0.014 258);
+  --crew-text-paper: oklch(0.985 0.003 258);
+
+  /* Crew palette values (index order = collision-walk order, see the
+     @theme inline comment above and docs/design/calendar-palette.md).
+     Each color is pre-verified >= 3:1 (NFR-018 non-text) against BOTH
+     --background: oklch(1 0 0) here and oklch(0.145 0 0) under `.dark` —
+     measured contrast per color is 3.26–6.08, never below 3.0. */
+  --crew-1: #939300; /* olive (H60), Y=0.271, vs light 3.27 / vs dark 6.05 */
+  --crew-2: #8d1cff; /* violet (H270), Y=0.137, vs light 5.61 / vs dark 3.53 */
+  --crew-3: #ff3e9e; /* pink (H330), Y=0.272, vs light 3.26 / vs dark 6.07 */
+  --crew-4: #007475; /* teal (H180), Y=0.138, vs light 5.59 / vs dark 3.54 */
+  --crew-5: #3b7500; /* green (H90), Y=0.137, vs light 5.63 / vs dark 3.52 */
+  --crew-6: #8080ff; /* periwinkle (H240), Y=0.273, vs light 3.26 / vs dark 6.08 */
+  --crew-7: #00a352; /* emerald (H150), Y=0.268, vs light 3.30 / vs dark 6.00 */
+  --crew-8: #009200; /* green (H120), Y=0.206, vs light 4.11 / vs dark 4.82 */
+  --crew-9: #007af5; /* blue (H210), Y=0.205, vs light 4.12 / vs dark 4.81 */
+  --crew-10: #dc00dc; /* magenta (H300), Y=0.204, vs light 4.14 / vs dark 4.79 */
+  --crew-11: #c36200; /* brown/orange (H30), Y=0.203, vs light 4.14 / vs dark 4.78 */
+  --crew-12: #d20000; /* red (H0), Y=0.137, vs light 5.61 / vs dark 3.53 */
+}
+
+/* OS 다크 감지 폴백 (mo_im 1일차 교차검증 — BOARD 지적사항 #1).
+   명시적 테마 토글(ThemeProvider)은 Task 011(DESIGN)로 이월됐다. 그때까지는
+   사용자가 아직 명시 선택을 하지 않은 기본 상태에서 OS 설정을 따라가도록
+   여기서 `.dark`와 동일한 뉴트럴 토큰 값을 미디어 쿼리로 다시 적용한다.
+   `--crew-*`는 D-026에 따라 라이트·다크 단일값이라 재정의하지 않는다.
+   토큰 값은 아래 `.dark` 블록과 반드시 동기화 상태를 유지할 것 — 값을 고칠 때
+   두 곳을 함께 고친다. `.dark`가 이 블록보다 소스 순서상 뒤에 있어 향후
+   명시적 토글이 클래스를 붙이면 OS 설정과 무관하게 `.dark`가 우선한다. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: oklch(0.145 0 0);
+    --card: oklch(0.2 0.01 258);
+    --popover: oklch(0.2 0.01 258);
+    --foreground: oklch(0.975 0.004 258);
+    --card-foreground: oklch(0.975 0.004 258);
+    --popover-foreground: oklch(0.975 0.004 258);
+    --primary: oklch(0.92 0.008 258);
+    --primary-foreground: oklch(0.2 0.01 258);
+    --secondary: oklch(0.265 0.012 258);
+    --secondary-foreground: oklch(0.975 0.004 258);
+    --muted: oklch(0.265 0.012 258);
+    --muted-foreground: oklch(0.715 0.014 258);
+    --accent: oklch(0.3 0.014 258);
+    --accent-foreground: oklch(0.975 0.004 258);
+    --destructive: oklch(0.72 0.18 22);
+    --border: oklch(0.85 0.02 258 / 14%);
+    --input: oklch(0.85 0.02 258 / 20%);
+    --ring: oklch(0.72 0.025 258);
+    --chart-1: oklch(0.86 0.01 258);
+    --chart-2: oklch(0.72 0.014 258);
+    --chart-3: oklch(0.6 0.018 258);
+    --chart-4: oklch(0.45 0.02 258);
+    --chart-5: oklch(0.33 0.02 258);
+    --sidebar: oklch(0.2 0.01 258);
+    --sidebar-foreground: oklch(0.975 0.004 258);
+    --sidebar-primary: oklch(0.92 0.008 258);
+    --sidebar-primary-foreground: oklch(0.2 0.01 258);
+    --sidebar-accent: oklch(0.3 0.014 258);
+    --sidebar-accent-foreground: oklch(0.975 0.004 258);
+    --sidebar-border: oklch(0.85 0.02 258 / 14%);
+    --sidebar-ring: oklch(0.72 0.025 258);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 위 `@media` 폴백과 **값이 완전히 같아야 한다.** 한쪽만 고치면 OS 다크와 명시
+   토글이 서로 다른 화면을 그린다. `--background`는 라이트와 마찬가지로 무채·기존
+   밝기를 유지한다 — 크루 12색의 다크 대비(최저 3.52)가 이 값 기준이다.
+   `--card`는 `oklch(0.2 0.01 258)`로 살짝 낮췄는데, 실측상 이 표면 위 크루색
+   최저 대비가 3.18(기존 0.205에서도 3.18)이라 3:1은 지키되 여유를 조금 벌었다. */
+.dark {
+  --background: oklch(0.145 0 0);
+  --card: oklch(0.2 0.01 258);
+  --popover: oklch(0.2 0.01 258);
+  --foreground: oklch(0.975 0.004 258);
+  --card-foreground: oklch(0.975 0.004 258);
+  --popover-foreground: oklch(0.975 0.004 258);
+  --primary: oklch(0.92 0.008 258);
+  --primary-foreground: oklch(0.2 0.01 258);
+  --secondary: oklch(0.265 0.012 258);
+  --secondary-foreground: oklch(0.975 0.004 258);
+  --muted: oklch(0.265 0.012 258);
+  --muted-foreground: oklch(0.715 0.014 258);
+  --accent: oklch(0.3 0.014 258);
+  --accent-foreground: oklch(0.975 0.004 258);
+  --destructive: oklch(0.72 0.18 22);
+  --border: oklch(0.85 0.02 258 / 14%);
+  --input: oklch(0.85 0.02 258 / 20%);
+  --ring: oklch(0.72 0.025 258);
+  --chart-1: oklch(0.86 0.01 258);
+  --chart-2: oklch(0.72 0.014 258);
+  --chart-3: oklch(0.6 0.018 258);
+  --chart-4: oklch(0.45 0.02 258);
+  --chart-5: oklch(0.33 0.02 258);
+  --sidebar: oklch(0.2 0.01 258);
+  --sidebar-foreground: oklch(0.975 0.004 258);
+  --sidebar-primary: oklch(0.92 0.008 258);
+  --sidebar-primary-foreground: oklch(0.2 0.01 258);
+  --sidebar-accent: oklch(0.3 0.014 258);
+  --sidebar-accent-foreground: oklch(0.975 0.004 258);
+  --sidebar-border: oklch(0.85 0.02 258 / 14%);
+  --sidebar-ring: oklch(0.72 0.025 258);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    /* 한국어 조판의 기본기(D-011 — v0.1은 한국어 단독).
+       `keep-all`이 없으면 브라우저는 한글을 음절 단위로 끊어 "모임 일정을 확
+       정합니다"처럼 낱말 한가운데서 줄을 바꾼다. 360px 뷰포트(NFR-026)에서
+       특히 자주 나온다. 낱말 단위로 끊되, 낱말 하나가 통째로 넘칠 때만
+       `overflow-wrap`이 마지막 수단으로 끊는다. */
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+  body {
+    @apply bg-background text-foreground;
+    line-height: var(--leading-body);
+  }
+  /* 제목은 별도 서체를 더하지 않고 굵기·트래킹으로만 세운다(위 `--font-heading`
+     주석 참고). 한글은 라틴보다 글자폭이 균일해 음수 트래킹이 잘 먹는다. */
+  :is(h1, h2, h3) {
+    letter-spacing: var(--tracking-display);
+    line-height: 1.35;
+    text-wrap: balance;
+  }
+  /* 품질 바닥: 동작 최소화 설정을 존중한다(NFR-017 WCAG 2.2 — 2.3.3 대상).
+     tw-animate-css와 Base UI 트랜지션이 전역으로 애니메이션을 쓰므로 여기서 한 번에 끈다. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

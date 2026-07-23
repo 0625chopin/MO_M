@@ -3,16 +3,10 @@
 agent team을 사용해 병렬로 업무를 진행할  팀원을 [@docs/team/ 폴더 하위 파일갯수] 명 구성할겁니다.
 
 * 팀 *
-  팀1 | @docs/team/01.CORE.md 
-  팀2 | @docs/team/02.DESIGN.md 
-  팀3 | @docs/team/03.CREW.md 
-  팀4 | @docs/team/04.BOARD.md
+  팀1 | @docs/team/ 하위 파일들 (형태는 01.팀명.md, 02.팀명.md)
 
 * 업무 스케쥴 *
-  팀1 | @docs/ROADMAP/team/01.CORE.md
-  팀2 | @docs/ROADMAP/team/02.DESIGN.md
-  팀3 | @docs/ROADMAP/team/03.CREW.md
-  팀4 | @docs/ROADMAP/team/04.BOARD.md
+  팀1 | @docs/ROADMAP/team/ 하위 파일들 (형태는 01.팀명.md, 02.팀명.md)
 
 으로 구성되며. 
 
