@@ -53,6 +53,26 @@ export interface CrewPaletteColor {
   readonly contrastVsLightBg: number;
   /** Contrast ratio against the dark-mode background (oklch(0.145 0 0) / ~#0a0a0a). */
   readonly contrastVsDarkBg: number;
+  /**
+   * Which text color to put ON TOP of this color when it is used as a FILL —
+   * the `certainty-confirmed` state in `globals.css` (see the design-language
+   * doc). `"ink"` = the dark ink (`--crew-text-ink`), `"paper"` = the light one
+   * (`--crew-text-paper`).
+   *
+   * Why this is data and not a runtime calculation: the 12 luminances span
+   * 0.1365–0.2725, so no single text color clears 4.5:1 (NFR-018 text) on all
+   * of them. The thresholds are Y <= 0.175 -> paper and Y >= 0.1833 -> ink, and
+   * no palette entry falls in the gap between them. Measured contrast for the
+   * chosen color is in {@link contrastOnFill}; the worst case is 4.68.
+   *
+   * Like the palette itself, this is a SINGLE value for light and dark mode
+   * (D-026) — it depends only on the fill color, not on the page background.
+   */
+  readonly textOn: "ink" | "paper";
+  /** CSS custom property backing {@link textOn}, ready to drop into `--crew-text`. */
+  readonly textCssVar: "--crew-text-ink" | "--crew-text-paper";
+  /** Contrast ratio of the {@link textOn} color against this color as a fill. */
+  readonly contrastOnFill: number;
   /** Approximate hue name, for debugging/QA readability only — not for logic. */
   readonly approxHueName: string;
 }
@@ -65,20 +85,24 @@ export interface CrewPaletteColor {
  * non-text) against both the light and dark --background token.
  */
 export const CREW_PALETTE: readonly CrewPaletteColor[] = [
-  { index: 0, hex: "#939300", approxHueName: "olive", relativeLuminance: 0.2707, contrastVsLightBg: 3.27, contrastVsDarkBg: 6.05 },
-  { index: 1, hex: "#8d1cff", approxHueName: "violet", relativeLuminance: 0.1371, contrastVsLightBg: 5.61, contrastVsDarkBg: 3.53 },
-  { index: 2, hex: "#ff3e9e", approxHueName: "pink", relativeLuminance: 0.2717, contrastVsLightBg: 3.26, contrastVsDarkBg: 6.07 },
-  { index: 3, hex: "#007475", approxHueName: "teal", relativeLuminance: 0.1378, contrastVsLightBg: 5.59, contrastVsDarkBg: 3.54 },
-  { index: 4, hex: "#3b7500", approxHueName: "green", relativeLuminance: 0.1365, contrastVsLightBg: 5.63, contrastVsDarkBg: 3.52 },
-  { index: 5, hex: "#8080ff", approxHueName: "periwinkle", relativeLuminance: 0.2725, contrastVsLightBg: 3.26, contrastVsDarkBg: 6.08 },
-  { index: 6, hex: "#00a352", approxHueName: "emerald", relativeLuminance: 0.2680, contrastVsLightBg: 3.30, contrastVsDarkBg: 6.00 },
-  { index: 7, hex: "#009200", approxHueName: "green (deep)", relativeLuminance: 0.2056, contrastVsLightBg: 4.11, contrastVsDarkBg: 4.82 },
-  { index: 8, hex: "#007af5", approxHueName: "blue", relativeLuminance: 0.2051, contrastVsLightBg: 4.12, contrastVsDarkBg: 4.81 },
-  { index: 9, hex: "#dc00dc", approxHueName: "magenta", relativeLuminance: 0.2038, contrastVsLightBg: 4.14, contrastVsDarkBg: 4.79 },
-  { index: 10, hex: "#c36200", approxHueName: "brown/orange", relativeLuminance: 0.2034, contrastVsLightBg: 4.14, contrastVsDarkBg: 4.78 },
-  { index: 11, hex: "#d20000", approxHueName: "red", relativeLuminance: 0.1370, contrastVsLightBg: 5.61, contrastVsDarkBg: 3.53 },
+  { index: 0, hex: "#939300", approxHueName: "olive", relativeLuminance: 0.2707, contrastVsLightBg: 3.27, contrastVsDarkBg: 6.05, textOn: "ink", contrastOnFill: 5.93 },
+  { index: 1, hex: "#8d1cff", approxHueName: "violet", relativeLuminance: 0.1371, contrastVsLightBg: 5.61, contrastVsDarkBg: 3.53, textOn: "paper", contrastOnFill: 5.37 },
+  { index: 2, hex: "#ff3e9e", approxHueName: "pink", relativeLuminance: 0.2717, contrastVsLightBg: 3.26, contrastVsDarkBg: 6.07, textOn: "ink", contrastOnFill: 5.95 },
+  { index: 3, hex: "#007475", approxHueName: "teal", relativeLuminance: 0.1378, contrastVsLightBg: 5.59, contrastVsDarkBg: 3.54, textOn: "paper", contrastOnFill: 5.36 },
+  { index: 4, hex: "#3b7500", approxHueName: "green", relativeLuminance: 0.1365, contrastVsLightBg: 5.63, contrastVsDarkBg: 3.52, textOn: "paper", contrastOnFill: 5.39 },
+  { index: 5, hex: "#8080ff", approxHueName: "periwinkle", relativeLuminance: 0.2725, contrastVsLightBg: 3.26, contrastVsDarkBg: 6.08, textOn: "ink", contrastOnFill: 5.96 },
+  { index: 6, hex: "#00a352", approxHueName: "emerald", relativeLuminance: 0.2680, contrastVsLightBg: 3.30, contrastVsDarkBg: 6.00, textOn: "ink", contrastOnFill: 5.88 },
+  { index: 7, hex: "#009200", approxHueName: "green (deep)", relativeLuminance: 0.2056, contrastVsLightBg: 4.11, contrastVsDarkBg: 4.82, textOn: "ink", contrastOnFill: 4.72 },
+  { index: 8, hex: "#007af5", approxHueName: "blue", relativeLuminance: 0.2051, contrastVsLightBg: 4.12, contrastVsDarkBg: 4.81, textOn: "ink", contrastOnFill: 4.72 },
+  { index: 9, hex: "#dc00dc", approxHueName: "magenta", relativeLuminance: 0.2038, contrastVsLightBg: 4.14, contrastVsDarkBg: 4.79, textOn: "ink", contrastOnFill: 4.69 },
+  { index: 10, hex: "#c36200", approxHueName: "brown/orange", relativeLuminance: 0.2034, contrastVsLightBg: 4.14, contrastVsDarkBg: 4.78, textOn: "ink", contrastOnFill: 4.68 },
+  { index: 11, hex: "#d20000", approxHueName: "red", relativeLuminance: 0.1370, contrastVsLightBg: 5.61, contrastVsDarkBg: 3.53, textOn: "paper", contrastOnFill: 5.38 },
 ].map((c) => ({
   ...c,
+  textOn: c.textOn as "ink" | "paper",
+  textCssVar: (c.textOn === "ink" ? "--crew-text-ink" : "--crew-text-paper") as
+    | "--crew-text-ink"
+    | "--crew-text-paper",
   tailwindToken: `crew-${c.index + 1}`,
   cssVar: `--crew-${c.index + 1}`,
 }));
@@ -96,6 +120,35 @@ export function normalizePaletteIndex(n: number): number {
 /** Looks up a palette entry by index (wraps via {@link normalizePaletteIndex}). */
 export function getCrewColor(index: number): CrewPaletteColor {
   return CREW_PALETTE[normalizePaletteIndex(index)];
+}
+
+/**
+ * The two inline CSS custom properties that the `certainty-draft` /
+ * `certainty-pending` / `certainty-confirmed` utilities in `globals.css` read.
+ * Spread the result into a `style` prop:
+ *
+ * ```tsx
+ * <span className="certainty-confirmed" style={crewCertaintyVars(i) as CSSProperties}>
+ * ```
+ *
+ * The cast is needed because React's `CSSProperties` still doesn't admit custom
+ * properties. This returns a plain string map (not `CSSProperties`) on purpose —
+ * `src/lib/` stays free of React types.
+ *
+ * Why a helper instead of letting call sites write the two vars themselves: the
+ * fill color and the text color on top of it are a MATCHED PAIR (see
+ * {@link CrewPaletteColor.textOn}). Picking the fill without the matching text
+ * color is how a 4.5:1 violation gets shipped, and it wouldn't be visible in
+ * light mode testing alone.
+ */
+export function crewCertaintyVars(
+  index: number,
+): Record<"--crew-color" | "--crew-text", string> {
+  const color = getCrewColor(index);
+  return {
+    "--crew-color": `var(${color.cssVar})`,
+    "--crew-text": `var(${color.textCssVar})`,
+  };
 }
 
 // `resolveCrewColorCollision` (FR-062 AC3 / D-026 same-day-cell collision

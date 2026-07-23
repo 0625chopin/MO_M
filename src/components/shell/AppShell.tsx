@@ -50,9 +50,12 @@ export function AppShell({
 
       <HeaderNav session={session} />
 
+      {/* 모바일 하단 여백은 탭바 높이(3.5rem)와 iOS 홈 인디케이터 영역을 함께 비운다 —
+          `MobileTabBar`가 같은 `env(safe-area-inset-bottom)`을 쓰므로 두 값은 함께 움직인다.
+          개편 전 고정 `pb-16`은 safe-area가 있는 기기에서 마지막 콘텐츠가 탭바에 가렸다. */}
       <div
         id={showSkipLink ? "main-content" : undefined}
-        className="flex flex-1 flex-col pb-16 md:pb-0"
+        className="flex flex-1 flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0"
       >
         {children}
       </div>

@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 import type { ReactNode } from "react";
-
 
 const STATE_ORDER = ["default", "loading", "empty", "error"] as const;
 export type SampleState = (typeof STATE_ORDER)[number];
@@ -16,7 +14,7 @@ export type SampleState = (typeof STATE_ORDER)[number];
 const STATE_LABELS: Record<SampleState, string> = {
   default: "기본",
   loading: "로딩",
-  empty: "빈",
+  empty: "빈 상태",
   error: "오류",
 };
 
@@ -26,6 +24,12 @@ const STATE_LABELS: Record<SampleState, string> = {
  * 이미 렌더링한 `ReactNode`를 `panels`로 넘긴다 — 함수(render prop)를 넘기지 않는 이유는
  * Server → Client Component 경계에서 함수 props가 직렬화되지 않기 때문이다. 일부 상태만
  * 의미가 있는 컴포넌트는 `panels`에서 해당 키를 생략하면 토글에서도 빠진다.
+ *
+ * **디자인 개편에서 바뀐 것**: 손으로 짠 `role="tablist"` + `<button role="tab">` 구현을
+ * shadcn `Tabs`(Base UI)로 교체했다. 기존 구현은 ARIA 역할만 붙고 **키보드 동작이 없었다** —
+ * 탭 패턴은 좌우 화살표로 탭을 옮기고 Tab 키는 패널로 빠져나가는 roving tabindex가 규약인데,
+ * 그게 없으면 스크린 리더 사용자에게 "탭"이라고 알려 놓고 탭처럼 움직이지 않는 위젯이 된다
+ * (NFR-020 키보드 전용 조작). 프리미티브가 그 동작을 제공한다.
  */
 export function StatePreview({
   panels,
@@ -35,30 +39,22 @@ export function StatePreview({
   className?: string;
 }) {
   const available = STATE_ORDER.filter((s) => panels[s] !== undefined);
-  const [state, setState] = useState<SampleState>(available[0] ?? "default");
+  if (available.length === 0) return null;
 
   return (
-    <div className={cn("flex flex-col gap-3", className)}>
-      <div role="tablist" aria-label="상태 전환" className="flex flex-wrap gap-1.5">
+    <Tabs defaultValue={available[0]} className={cn("gap-3", className)}>
+      <TabsList aria-label="상태 전환" variant="line">
         {available.map((s) => (
-          <button
-            key={s}
-            type="button"
-            role="tab"
-            aria-selected={state === s}
-            onClick={() => setState(s)}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-              state === s
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:text-foreground",
-            )}
-          >
+          <TabsTrigger key={s} value={s} className="px-2.5 text-xs">
             {STATE_LABELS[s]}
-          </button>
+          </TabsTrigger>
         ))}
-      </div>
-      <div role="tabpanel">{panels[state]}</div>
-    </div>
+      </TabsList>
+      {available.map((s) => (
+        <TabsContent key={s} value={s}>
+          {panels[s]}
+        </TabsContent>
+      ))}
+    </Tabs>
   );
 }

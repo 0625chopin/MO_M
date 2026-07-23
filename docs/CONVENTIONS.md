@@ -23,10 +23,11 @@
 ```
 src/
   app/                      # 라우팅 전용. 로직을 두지 않는다 — 얇은 껍데기
-    sample/                 # [완료·최소 골격] /sample 쇼케이스 (아래 "/sample 4상태 규칙" 참고).
-                             #   3일차 Task 011(DESIGN)이 최소 골격 + 이번 회차 4개 컴포넌트
-                             #   등록까지 만들었다. 카테고리 섹션·앵커 내비·컨테이너 쿼리 프리뷰
-                             #   프레임은 아직 없다 — Task 012(DESIGN, 다음 회차)가 확장한다.
+    sample/                 # [완료] /sample 쇼케이스 (아래 "/sample 4상태 규칙" 참고).
+                             #   3일차 Task 011(DESIGN)이 최소 골격을, 디자인 개편(D-038)이
+                             #   Task 012 구조로 확장했다 — 카테고리 섹션 + 앵커 내비 +
+                             #   폭 토글(360/768/1280/전체) 프리뷰 프레임. 섹션은 기반(색·조판)·
+                             #   확정성 스케일·앱 셸·원자 컴포넌트 넷이다.
     <route-segment>/        # [향후] 예: crews/, calendar/ — FR 단위로 팀원이 생성
       page.tsx
       layout.tsx
@@ -35,8 +36,12 @@ src/
       default.tsx           # 병렬 라우트(@slot)를 쓰는 세그먼트는 Next 16에서 필수
 
   components/
-    ui/                     # [완료·부분] shadcn/ui 원시 컴포넌트 — CREW 담당(`button.tsx`·`card.tsx`
-                             #   이미 존재). 이 Task에서 파일 생성 안 함
+    ui/                     # [완료·부분] shadcn/ui 원시 컴포넌트. `button`·`card`(CREW, Task 004) +
+                             #   디자인 개편(D-038)이 추가한 `badge`·`skeleton`·`tabs`·`separator`·
+                             #   `toggle`/`toggle-group`·`empty`·`avatar`. **직접 만들기 전에
+                             #   shadcn MCP 레지스트리에서 먼저 찾는다** — 손으로 다시 짜면
+                             #   접근성 처리와 다크모드 토큰 연결을 매번 새로 검증해야 한다.
+                             #   추가 시 React Compiler 수동 메모 여부를 확인한다(I-022, D-029)
     shell/                  # [완료] 3일차 Task 011(DESIGN, D-030 ④). 앱 셸 4종 —
                              #   `AppShell`·`HeaderNav`·`MobileTabBar`·`PageHeader`(전부 표현
                              #   컴포넌트, `<Name>Container.tsx` 없음 — `src/app/layout.tsx`가
@@ -46,11 +51,12 @@ src/
                              #   내비 항목 순수 함수)도 여기 있다 — `lib/data`·`lib/rules`
                              #   어디에도 지정 위치가 없어 부득이 이곳에 뒀다(I-026 참고, 실 인증
                              #   연동 시 이관 검토 대상).
-    sample/                 # [완료] 3일차 Task 011(DESIGN). `/sample` 전용 쇼케이스 인프라 —
-                             #   `StatePreview`(기본·로딩·빈·오류 토글), `PreviewFrame`(`position:
-                             #   fixed`/`sticky` 요소를 미리보기 상자 안에 가두는 컨테이너). 제품
-                             #   도메인 컴포넌트가 아니라 개발 도구라 `<domain>/` 규칙(아래) 대신
-                             #   여기 별도 표기한다.
+    sample/                 # [완료] 3일차 Task 011(DESIGN) + 디자인 개편(D-038). `/sample` 전용
+                             #   쇼케이스 인프라 — `StatePreview`(기본·로딩·빈·오류 토글, shadcn
+                             #   `Tabs` 기반), `PreviewFrame`(`position: fixed`/`sticky` 요소를
+                             #   미리보기 상자 안에 가두는 컨테이너 + 폭 토글). 제품 도메인
+                             #   컴포넌트가 아니라 개발 도구라 `<domain>/` 규칙(아래) 대신 여기
+                             #   별도 표기한다.
     <domain>/                # [향후] 도메인별 컴포넌트 (예: crews/, polls/, chat/, calendar/)
       <Name>Container.tsx     # 컨테이너: 데이터 조회·구독 소유 (D-030 ①)
       <Name>.tsx               # 표현: props만 받는 순수 렌더 (D-030 ①)
@@ -141,6 +147,20 @@ src/
 - **컴포넌트를 새로 만들 때마다 여기 등록한다.** 등록을 미루면 쇼케이스가 실제 컴포넌트 목록과 어긋난다(R-006 신호).
 - 각 컴포넌트는 **기본·로딩·빈·오류** 4상태를 토글로 노출한다. "오류"에는 네트워크 실패뿐 아니라 **도메인 오류**(RLS 403, 정원 마감, 동시 수정 충돌)를 포함한다(D-030 ③).
 - 뷰포트 확인은 프리뷰 프레임 안에서 **컨테이너 쿼리**(`@container` + `@sm:`/`@lg:`)로 한다. Tailwind의 `sm:`/`lg:`는 뷰포트 기준이라 프레임 폭만 줄여서는 재배치되지 않는다.
+  - **따라서 도메인 컴포넌트는 컨테이너 쿼리로 짠다.** 그래야 `PreviewFrame`의 폭 토글이 실제 검증 도구가 되고, 같은 컴포넌트를 좁은 슬롯과 넓은 본문에 함께 쓸 수 있다.
+  - **앱 셸 4종은 의도적 예외로 뷰포트 기준(`md:`)이다** — "데스크톱은 헤더 링크, 모바일은 하단 탭바"는 기기에 대한 판단이지 부모 상자 폭에 대한 판단이 아니고, 실제 앱에서 셸의 부모는 항상 뷰포트다. 셸의 헤더↔탭바 전환은 브라우저 창을 실제로 줄여서 확인한다.
+
+## 디자인 토큰 규칙 (D-038)
+
+전체 근거·실측 수치는 [`design/design-language.md`](./design/design-language.md). 컴포넌트를 만들 때 어기기 쉬운 것만 여기 옮겨 둔다.
+
+- **색·간격·폰트에 임의 값을 쓰지 않는다.** `globals.css`의 `@theme inline` 토큰을 쓴다 — 다크모드 대응이 토큰에 걸려 있다.
+- **UI 크롬에 유채색을 쓰지 않는다.** 화면의 채도는 크루 12색(데이터)이 가져간다. 예외는 `--destructive`뿐이다.
+- **크루색은 `--background`·`--card` 표면 위에만 놓는다.** `--muted`/`--secondary`/`--accent` 위에서는 crew-3(pink)·crew-6(periwinkle)이 **2.99**로 3:1(NFR-018)을 깬다(실측).
+- **크루색을 채울 때는 글자색을 짝으로 가져온다.** `crewCertaintyVars(index)`가 채움색과 그 위 글자색을 함께 돌려준다 — 짝을 깨면 4.5:1을 어기고, 그 실수는 라이트 모드 테스트만으로는 드러나지 않는다.
+- **모노(`font-mono`)에 한글을 넣지 않는다.** Geist Mono에 한글 글리프가 없어 OS 폰트로 폴백되고 한 줄에서 서체가 갈린다. 한글이 섞이면 **sans + `.tnum`**.
+- **상태를 색만으로 전달하지 않는다**(WCAG 1.4.1). 확정성 3단계는 점선/실선/채움이라는 형태 차이를 함께 갖는다.
+- **다크 값을 고칠 때는 `@media (prefers-color-scheme: dark)`와 `.dark` 두 블록을 함께 고친다.** 명시적 토글이 아직 없어(I-020) 두 벌을 손으로 동기화하는 상태다.
 
 ---
 
