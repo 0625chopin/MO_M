@@ -57,6 +57,68 @@ export const ko = {
     profile: "내 정보",
   },
 
+  /**
+   * SC-01 랜딩 페이지(requirements.md 5.1.1절). 값은 requirements.md 1.1절 "제품 한 줄 정의"
+   * 원문 그대로다. PRD §6 "랜딩 페이지"의 "주요 기능" 항목("제품 한 줄 소개 및 핵심 가치(P1~P5)
+   * 노출")이 요구하는 한 줄 소개에 해당한다. D-001("모임"을 Crew·Meetup 두 엔티티로 분리하는
+   * 결정, prioritization-and-risks.md)은 이 한 줄 정의가 서술하는 크루/모임 구도의 배경 결정일
+   * 뿐 이 문구 자체를 승인한 결정은 아니다 — requirements.md:35의 D-001 인용은 1.2절(P1~P5
+   * 문제 정의)이 고객 검토로 확인됐다는 뜻이지 1.1절 문장을 가리키지 않는다.
+   */
+  landing: {
+    hero: {
+      title:
+        "동호회·소모임(크루)을 만들고, 크루 안에서 게시글로 모임 일정을 제안하고, 찬반 투표로 확정한 뒤, 확정된 일정을 캘린더에서 한눈에 보는 웹 서비스",
+    },
+  },
+
+  /** SC-06 홈 대시보드 페이지. `nav.home`(헤더 내비 라벨)과 의미가 달라 별도 키를 둔다. */
+  home: {
+    dashboard: {
+      title: "홈 대시보드",
+    },
+  },
+
+  /** SC-07~09, SC-14~15 크루 관련 페이지. `nav.crews`("내 크루")와는 의미가 달라 재사용하지 않는다. */
+  crew: {
+    explore: {
+      title: "크루 검색·탐색",
+    },
+    create: {
+      title: "크루 개설",
+    },
+    home: {
+      title: "크루 홈",
+    },
+    members: {
+      title: "멤버 관리",
+    },
+    settings: {
+      title: "크루 설정",
+    },
+  },
+
+  /** SC-16 통합 캘린더 페이지. */
+  calendar: {
+    month: {
+      title: "통합 캘린더",
+    },
+  },
+
+  /** SC-19 계정 설정 페이지. `nav.profile`("내 정보"는 헤더 계정 메뉴 라벨)과는 의미가 달라 별도 키를 둔다. */
+  account: {
+    settings: {
+      title: "계정 설정",
+    },
+  },
+
+  /** SC-20 받은 초대함 페이지. */
+  invitation: {
+    inbox: {
+      title: "받은 초대함",
+    },
+  },
+
   board: {
     list: {
       title: "게시판",
@@ -99,6 +161,7 @@ export const ko = {
       },
     },
     detail: {
+      title: "게시글 상세",
       edited: "(수정됨)",
       deleted: common.post.deleted,
       lockedNotice: "투표가 시작되어 더 이상 수정할 수 없어요",
@@ -148,6 +211,9 @@ export const ko = {
   },
 
   meetup: {
+    detail: {
+      title: "Meetup 상세",
+    },
     attendance: {
       attend: "참석",
       absent: "불참",
@@ -158,6 +224,9 @@ export const ko = {
   },
 
   chat: {
+    room: {
+      title: "채팅방",
+    },
     postCard: {
       deletedPost: common.post.deleted,
       otherCrewPost: "다른 크루의 게시글이에요",
@@ -185,6 +254,12 @@ export const ko = {
       title: "로그인",
       lockedNotice: "5회 연속 실패로 잠시 로그인이 제한돼요",
       genericError: "아이디 또는 비밀번호를 확인해 주세요",
+    },
+    signup: {
+      title: "회원가입",
+    },
+    onboarding: {
+      title: "온보딩",
     },
   },
 

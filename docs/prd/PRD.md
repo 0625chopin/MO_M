@@ -521,7 +521,7 @@
 
 ## 7. 데이터 모델
 
-> `requirements.md` 5.2절 개념 모델(엔티티 20종, `DevicePushToken`은 차기 테이블 미생성)을 PRD 수준으로 간추렸다. 타입·인덱스·마이그레이션은 포함하지 않는다. Mock 데이터와 실데이터는 **동일한 TypeScript 타입**을 공유한다.
+> `requirements.md` 5.2절 개념 모델(엔티티 22종, `DevicePushToken`은 차기 테이블 미생성)을 PRD 수준으로 간추렸다. 타입·인덱스·마이그레이션은 포함하지 않는다. Mock 데이터와 실데이터는 **동일한 TypeScript 타입**을 공유한다.
 
 ### 계정
 

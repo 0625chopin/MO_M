@@ -71,9 +71,9 @@ export const ko = {
 
 - 키는 **camelCase**. 값(한국어 문자열)과 키(영문 식별자)를 분리해 번역 시 키는 그대로 두고
   값만 바꿀 수 있게 한다.
-- 최상위 도메인은 요구사항 문서 4절의 기능 영역과 느슨하게 맞춘다: `common`, `nav`, `board`, `vote`,
-  `meetup`, `chat`, `notification`, `auth`, `error`. 새 도메인이 필요하면 이 목록에 추가하고,
-  기존 도메인에 억지로 끼워 넣지 않는다.
+- 최상위 도메인은 요구사항 문서 4절의 기능 영역과 느슨하게 맞춘다: `common`, `nav`, `landing`, `home`,
+  `crew`, `calendar`, `account`, `invitation`, `board`, `vote`, `meetup`, `chat`, `notification`,
+  `auth`, `error`. 새 도메인이 필요하면 이 목록에 추가하고, 기존 도메인에 억지로 끼워 넣지 않는다.
 - **상태 배지류는 상태 머신의 상태값과 키를 맞추되, 값은 별개다.** 예: `vote.status.closedPassed`의
   값은 `"가결"`이지만 이 값은 표시 문구일 뿐 판정 로직의 상태 문자열(`Task 009A`가 만드는 순수
   함수의 리턴값)과 같은 것이 아니다. 로직에서 이 문구를 직접 조합하지 말고, 로직이 반환한 상태값을

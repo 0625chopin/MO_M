@@ -2,7 +2,7 @@
 
 개발 중 발견한 **미결 이슈와 개선사항**을 기록한다. 이 파일이 이슈 번호의 **단일 소스**다.
 
-- **다음 이슈 번호: I-024** (등재할 때마다 이 줄을 갱신한다)
+- **다음 이슈 번호: I-025** (등재할 때마다 이 줄을 갱신한다)
 - 확정된 **결정**은 여기가 아니라 [`prioritization-and-risks.md`](./prioritization-and-risks.md) 6.3절 결정 기록(D-\*)에 쓴다. 결정과 미결을 같은 곳에 두지 않는다.
 - 이슈는 **누구나 제보**한다. 등재할 때 형식(아래 "기록 형식")을 지키고 "다음 이슈 번호" 줄을 함께 갱신한다.
 
@@ -99,6 +99,15 @@
 - **내용**: D-036은 PRD §8을 "설치됨"/"도입 예정" 두 구획으로 나누기로 했고, shadcn은 그 결정 당시 "도입 예정" 구획(§8.2)에 있었다. Task 004로 실제 설치가 끝났으니 "설치됨" 구획(§8.1)으로 옮겨야 하는데, `PRD.md`는 이 Task의 파일 담당 경계 밖이라 반영하지 않았다.
 - **영향**: PRD §8과 실제 `package.json`이 다시 어긋난다 — D-036이 막으려던 문제(R-006 재발)가 좁은 범위로 재현된다.
 - **후속**: PRD.md 담당자(또는 팀장)가 §8.2의 shadcn 행을 §8.1로 옮긴다. `docs/decisions/shadcn-ui-adoption.md`가 설치 이행 기록이다.
+
+### I-024 · `Notification.payload`가 알림 유형별로 형태를 구분해주지 못한다
+
+- **상태**: 열림
+- **영역**: 데이터
+- **제보**: CREW (2026-07-24, Task 006 교차검증)
+- **내용**: `src/lib/types/notification.types.ts:32`의 `payload: Record<string, unknown>`는 `NotificationType`(10종) 각각이 실제로는 서로 다른 라우팅·표시 정보를 담는데도 타입이 이를 구분하지 않는다. 예: `poll_closed`는 postId·pollId가, `staff_appointed`는 crewId·targetProfileId가 필요하다. 소비 컴포넌트(알림 센터, Task 023)마다 `payload.xxx as string` 같은 unsafe cast가 필요해진다.
+- **영향**: 타입이 안전망 역할을 못 해 알림 유형-payload 불일치가 런타임까지 발견되지 않는다. 소비처인 Task 023(알림, 14~16주차)이 시작되기 전까지는 급하지 않다.
+- **후속**: `NotificationType`을 판별자로 쓰는 discriminated union(`NotificationPayloadMap` 형태 — 유형별 payload 인터페이스를 정의하고 `Notification`을 제네릭 또는 유니온으로 재구성)을 제안. Task 023 착수 시 검토.
 
 ## 닫힌 이슈
 
