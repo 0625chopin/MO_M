@@ -36,7 +36,7 @@ color: blue
 ### 1️⃣ 수집
 
 - ROADMAP **전문**을 읽습니다. 요약본이나 헤더만 보고 추정하지 마십시오.
-- 함께 읽을 것 (있는 경우만): `docs/TEAM.md`(역할·매핑), `docs/ISSUES.md`(미결·차단 이슈), `docs/require/`(요구사항 ID), `CLAUDE.md`(기술 제약).
+- 함께 읽을 것 (있는 경우만): `docs/TEAM.md`(역할·매핑), `docs/ISSUES.md`(미결·차단 이슈), `docs/requirements/requirements.md`(요구사항 FR-\*/NFR-\*), `docs/prioritization-and-risks.md`(우선순위·리스크 R-\*·결정 D-\*), `CLAUDE.md`(기술 제약).
 - **착수 게이트**를 먼저 확인합니다. 결정 대기(미결 이슈)에 묶인 Task는 일정상 **시작 불가 구간**으로 표시해야 합니다.
 
 ### 2️⃣ Task 정규화
