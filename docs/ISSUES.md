@@ -2,7 +2,7 @@
 
 개발 중 발견한 **미결 이슈와 개선사항**을 기록한다. 이 파일이 이슈 번호의 **단일 소스**다.
 
-- **다음 이슈 번호: I-030** (등재할 때마다 이 줄을 갱신한다)
+- **다음 이슈 번호: I-032** (등재할 때마다 이 줄을 갱신한다)
 - 확정된 **결정**은 여기가 아니라 [`prioritization-and-risks.md`](./prioritization-and-risks.md) 6.3절 결정 기록(D-\*)에 쓴다. 결정과 미결을 같은 곳에 두지 않는다.
 - 이슈는 **누구나 제보**한다. 등재할 때 형식(아래 "기록 형식")을 지키고 "다음 이슈 번호" 줄을 함께 갱신한다.
 
@@ -291,3 +291,21 @@
 - **내용**: `--destructive`(`oklch(0.52 0.21 27)`)와 크루 12번 색(`#d20000`, H0)이 색상환에서 가깝다. 두 색은 성격이 완전히 다르다 — 전자는 "파괴 동작·오류"라는 시맨틱이고 후자는 "12번 크루"라는 식별자다.
 - **영향**: 12번 색을 배정받은 크루의 확정 칩과 삭제 버튼·오류 배지가 한 화면에 나란히 놓이면 사용자가 둘을 같은 계열로 읽을 수 있다. 캘린더(FR-062)·크루 홈에서 발생 가능하다.
 - **후속**: 당장은 배치 규칙으로 피한다(`design-language.md` §1). 실제 화면에서 문제가 확인되면 ㉠ destructive의 hue를 이동하거나 ㉡ 크루 확정 칩에 크루명 텍스트를 항상 동반시키는(이미 NFR-019가 요구) 쪽으로 해소한다. **색 자체를 바꾸는 선택은 D-026 팔레트 재검증을 요구하므로 destructive 쪽을 먼저 움직인다.**
+
+### I-030 · 초대(Invitation) 만료 시 짝을 이루는 CrewMembership 행의 다음 상태가 정의돼 있지 않다
+
+- **상태**: 열림
+- **영역**: 데이터 / 요구사항
+- **제보**: CREW (2026-07-24, Task 010 Mock 시드 생성)
+- **내용**: `requirements.md` 2.4절 "Crew 멤버십 상태" 다이어그램은 `invited`에서 나가는 화살표를 `accept_invitation`(→ active)·`decline_invitation`(→ declined) 둘로만 정의한다(`src/lib/rules/crew-membership-transition.ts`의 `TRANSITIONS.invited`도 이 둘뿐이다). 그런데 `Invitation`에는 `expiresAt`(발급 후 14일)이 있고 `InvitationStatus`에 `"expired"` 값도 있다 — 즉 **Invitation은 스스로 만료를 표현할 수 있는데, 그 시점에 이미 만들어져 있는 `invited` 상태 `CrewMembership` 행이 어떻게 되는지는 다이어그램에 없다.**
+- **영향**: 시드 데이터(Task 010)는 이 간극 때문에 "만료된 초대"에는 대응하는 `CrewMembership` 행을 아예 만들지 않는 방식으로 우회했다(`src/lib/data/mock/seed/generate-crews.ts`의 "만료된 초대" 절 주석 참고) — 즉 만료된 초대의 대상자는 애초에 `invited` 멤버십 행이 생기지 않은 것처럼 다룬다. 실제 구현(Task 030 인증 연결 이후, 또는 그 전 크루·멤버십 화면 Task 016B/017B)에서 초대 만료 배치/트리거를 만들 때 이 상태 전이(예: `invited --expire--> declined`? 아니면 행 자체를 삭제?)를 먼저 확정해야 한다.
+- **후속**: 크루·멤버십 화면 담당(CREW, Task 016B·017B) 또는 그 이전에 결정 필요. 결정되면 `crew-membership-transition.ts`의 `TRANSITIONS.invited`에 이벤트를 추가하고 `docs/prioritization-and-risks.md` 6.3절에 D-\*로 등재한다.
+
+### I-031 · ROADMAP·CREW 담당 문서·PRD 검증 세 곳의 "투표 40"이 FR-060의 가결 Poll:Meetup 1:1 제약과 모순된다
+
+- **상태**: 열림
+- **영역**: 데이터 / 문서
+- **제보**: CREW (2026-07-24, Task 010 Mock 시드 생성) — 수치 대조 확인: BOARD (2026-07-24, Task 010 교차검증, `requirements.md:828-837` FR-060 AC1·AC3 및 2.4절 상태 다이어그램 `closed_passed --> [*]: Meetup 생성` 근거로 재확인)
+- **내용**: 아래 **세 곳 모두 동일하게** "크루 15·멤버 300·게시글 200·**투표 40**·메시지 2,000·Meetup 60" 규모를 명시한다 — `docs/ROADMAP/ROADMAP.md:179`, `docs/ROADMAP/team/03.CREW.md:52`, `docs/prd/PRD-validation.md:890`. 그런데 `requirements.md`의 FR-060 AC1("제안의 예정일에 Meetup이 1건 생성된다")·AC3("재실행해도 Meetup이 중복 생성되지 않는다(멱등)")와 2.4절 상태 다이어그램이 **가결(`closed_passed`) Poll 1건 : Meetup 1건의 1:1 관계를 확정**한다(Task 007의 `meetup-1`↔`poll-2` 관계가 이미 이 전제로 만들어져 있었다). Meetup 60건을 만들려면 `closed_passed` Poll이 최소 60건 있어야 하는데 **40 < 60이라 "투표 40·Meetup 60"은 애초에 동시 성립이 불가능한 수치**다 — 어느 한쪽의 오기다.
+- **영향**: Task 010(Mock 시드 생성)이 이 스펙을 문자 그대로 따를 수 없어, 실제로는 Poll을 72건(가결 60 + 상태 다양성 12) 생성하고 이 판단 근거를 `src/lib/data/mock/seed/generate-polls.ts` 모듈 docstring에 남겼다(코드 실측: profiles 300·crews 15·crewMemberships 300·posts 200·**polls 72**·meetups **60**·chatMessages 2000, 상세는 CREW의 4일차 워크로그·Task 010 완료 보고 참고). 다음에 로드맵의 "투표 40"만 보고 "시드가 스펙과 다르다"고 오판할 사람을 막기 위해 여기 등재한다.
+- **후속**: `docs/ROADMAP/ROADMAP.md:179`·`docs/prd/PRD-validation.md:890`은 CREW 소유 문서가 아니라 직접 고치지 않는다 — 위치만 남겨 뒀고 팀장이 워크로그에 반영한다. `docs/ROADMAP/team/03.CREW.md`의 Task 010 항목에는 이 수치 정정 사실을 CREW가 직접 한 줄로 남겼다(해당 파일 참고).

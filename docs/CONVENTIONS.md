@@ -27,7 +27,10 @@ src/
                              #   3일차 Task 011(DESIGN)이 최소 골격을, 디자인 개편(D-038)이
                              #   Task 012 구조로 확장했다 — 카테고리 섹션 + 앵커 내비 +
                              #   폭 토글(360/768/1280/전체) 프리뷰 프레임. 섹션은 기반(색·조판)·
-                             #   확정성 스케일·앱 셸·원자 컴포넌트 넷이다.
+                             #   확정성 스케일·앱 셸·원자 컴포넌트 넷이다. `page.tsx` 자체에는
+                             #   섹션·항목 데이터가 없다 — 4일차 Task 012(DESIGN)가
+                             #   `src/components/sample/registry.ts`로 등록 인터페이스를
+                             #   확정해, 다른 팀원이 이 파일을 고치지 않고 자기 섹션을 등록한다.
     <route-segment>/        # [향후] 예: crews/, calendar/ — FR 단위로 팀원이 생성
       page.tsx
       layout.tsx
@@ -51,12 +54,20 @@ src/
                              #   내비 항목 순수 함수)도 여기 있다 — `lib/data`·`lib/rules`
                              #   어디에도 지정 위치가 없어 부득이 이곳에 뒀다(I-026 참고, 실 인증
                              #   연동 시 이관 검토 대상).
-    sample/                 # [완료] 3일차 Task 011(DESIGN) + 디자인 개편(D-038). `/sample` 전용
-                             #   쇼케이스 인프라 — `StatePreview`(기본·로딩·빈·오류 토글, shadcn
-                             #   `Tabs` 기반), `PreviewFrame`(`position: fixed`/`sticky` 요소를
-                             #   미리보기 상자 안에 가두는 컨테이너 + 폭 토글). 제품 도메인
-                             #   컴포넌트가 아니라 개발 도구라 `<domain>/` 규칙(아래) 대신 여기
-                             #   별도 표기한다.
+    sample/                 # [완료] 3일차 Task 011(DESIGN) + 디자인 개편(D-038) + 4일차
+                             #   Task 012(DESIGN). `/sample` 전용 쇼케이스 인프라 —
+                             #   `StatePreview`(기본·로딩·빈·오류 토글, shadcn `Tabs` 기반),
+                             #   `PreviewFrame`(`position: fixed`/`sticky` 요소를 미리보기
+                             #   상자 안에 가두는 컨테이너 + 폭 토글), `showcase-types.ts`
+                             #   (`ShowcaseSection`·`ShowcaseItem`·`defineSection` — 등록
+                             #   인터페이스), `registry.ts`(팀원별 섹션을 조립하는 단일
+                             #   진입점), `ShowcaseSectionBlock.tsx`(섹션 렌더러),
+                             #   `sections/`(카테고리별 데이터 — `foundation`·`certainty`·
+                             #   `shell`·`primitives`). 다른 팀원이 자기 섹션을 등록하는
+                             #   방법은 `src/components/sample/README.md` 참고 — `page.tsx`를
+                             #   고치지 않고 `sections/`에 파일을 추가하고 `registry.ts`에
+                             #   한 줄만 더한다. 제품 도메인 컴포넌트가 아니라 개발 도구라
+                             #   `<domain>/` 규칙(아래) 대신 여기 별도 표기한다.
     <domain>/                # [향후] 도메인별 컴포넌트 (예: crews/, polls/, chat/, calendar/)
       <Name>Container.tsx     # 컨테이너: 데이터 조회·구독 소유 (D-030 ①)
       <Name>.tsx               # 표현: props만 받는 순수 렌더 (D-030 ①)

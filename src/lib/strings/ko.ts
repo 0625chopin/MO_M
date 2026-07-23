@@ -25,6 +25,10 @@ const common = {
     delete: "삭제",
     close: "닫기",
     retry: "다시 시도",
+    /** Task 014 — 전역 오류·경계 화면의 "홈으로" 버튼. `goBack`(브라우저 뒤로 가기)과 달리
+     *  항상 알려진 안전한 목적지(`/`)로 이동한다 — 오류 화면에서는 "뒤로"가 다시 같은 오류로
+     *  돌아갈 수 있어 안전하지 않다. */
+    goHome: "홈으로 가기",
     more: "더 보기",
     share: "공유",
     copy: "복사",
@@ -280,6 +284,13 @@ export const ko = {
     },
   },
 
+  /**
+   * Task 014 — 전역 오류·경계 화면(`error.tsx`·`not-found.tsx`·`RouteErrorBoundary`). 키는
+   * `src/lib/data/contracts.ts`의 `DataErrorCode`(`not_found`·`conflict`·`validation_failed`·
+   * `forbidden`) + 그 계약 밖의 `network`(세션 조회 실패, `auth-session.ts`)·`capacityFull`
+   * (정원 마감, `meetup.types.ts`의 `AttendanceJoinResult.reason: "full"`)을 합친 어휘와
+   * 1:1 대응한다 — 새 오류 분류 체계를 만들지 않고 기존 도메인 오류 타입을 그대로 옮겼다.
+   */
   error: {
     notFound: {
       title: "페이지를 찾을 수 없어요",
@@ -297,5 +308,16 @@ export const ko = {
       title: "다른 사용자가 먼저 처리했어요",
       description: "최신 상태로 새로고침해 주세요",
     },
+    validationFailed: {
+      title: "입력한 내용을 확인해 주세요",
+      description: "형식에 맞지 않는 값이 있어요",
+    },
+    capacityFull: {
+      title: "정원이 찼어요",
+      description: "이미 인원이 다 찼어요",
+    },
+    /** 프로덕션에서는 원본 오류 메시지 대신 이 코드만 노출한다(NFR-014) — 서버 내부 정보를
+     *  사용자에게 드러내지 않으면서도 문의 시 로그와 대조할 수 있게 한다. */
+    digest: "오류 코드: {digest}",
   },
 } as const;

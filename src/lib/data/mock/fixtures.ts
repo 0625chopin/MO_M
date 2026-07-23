@@ -17,21 +17,27 @@ import type {
   Profile,
 } from "@/lib/types";
 
+import { buildBulkSeed } from "./seed";
+
+import type { ExistingCrewContext } from "./seed/generate-crews";
+
 /**
- * Mock 최소 픽스처.
+ * Mock 시드 데이터.
  *
- * Task 007 범위는 "계약이 동작함을 보이는" 데 필요한 최소 데이터까지다 — 크루 15·
- * 멤버 300·게시글 200 같은 대량 시드는 Task 010(5주차) 소관이라 여기서 만들지 않는다.
- * 아래 시드는 각 엔티티가 최소 1개 이상의 관계(크루 2개·양쪽 가시성, 진행 중/종료된
- * 투표 각 1건, 정원 있는 Meetup, 대기 중인 가입 신청·초대, 읽음/안읽음 알림 각 1건)를
- * 갖도록 구성해 모든 조회·쓰기 함수가 실제로 값을 주고받는 경로를 최소 1번 통과하게 한다.
+ * 아래 손으로 쓴 최소 픽스처(profile-1~3·crew-1~2 등, Task 007)는 "계약이 동작함을
+ * 보이는" 최소 관계 집합을 그대로 유지한다 — `src/components/shell/get-auth-session.ts`
+ * 등 이미 `profile-1`을 하드코딩해 참조하는 코드가 있어(값을 바꾸면 그쪽이 깨진다)
+ * 손대지 않는다. 그 위에 `./seed/buildBulkSeed`(Task 010)가 크루 15·멤버 300·
+ * 게시글 200·메시지 2,000·Meetup 60 규모까지 결정론적으로 확장한 데이터를 이어붙인다
+ * — 실제 생성 로직·개수 근거는 `./seed/index.ts`와 그 하위 모듈 docstring 참고.
  *
  * 데이터는 모듈 스코프의 가변 배열에 보관한다 — 서버 프로세스 생애주기 동안만 유지되고
  * Next.js 개발 서버 재시작/모듈 리로드 시 초기화된다. 실제 영속성은 Supabase 연결
  * (Task 026~028) 이후 생긴다. 이 휘발성은 Mock 단계의 정상 동작이다.
  */
 
-let idCounter = 100;
+const INITIAL_ID_COUNTER = 100;
+let idCounter = INITIAL_ID_COUNTER;
 /** 쓰기 함수가 새 엔티티에 부여하는 id. 실데이터에서는 DB가 발급한다(예: uuid). */
 export function generateId(prefix: string): Id {
   idCounter += 1;
@@ -331,22 +337,43 @@ function createSeed() {
     },
   ];
 
-  return {
-    profiles,
-    crews,
-    crewMemberships,
+  // ---- Task 010: 위 최소 픽스처 위에 실사용 규모(크루 15·멤버 300·게시글 200·
+  //      메시지 2,000·Meetup 60)까지 결정론적으로 확장한다. crew-1·crew-2 객체를
+  //      그대로 넘겨 colorKey를 실제 hash(crewId) mod 12로 바로잡는다(Task 007
+  //      최소 픽스처가 0·1로 손으로 넣어 뒀던 값과 달랐다 — 아래 함수가 고친다).
+  const existingCrewContexts: ExistingCrewContext[] = [
+    { crew: crews[0], activeMemberIds: ["profile-1", "profile-2"] },
+    { crew: crews[1], activeMemberIds: ["profile-2"] },
+  ];
+  const existingPostsByCrewId = new Map<Id, Post[]>([
+    ["crew-1", posts],
+    ["crew-2", []],
+  ]);
+  const bulk = buildBulkSeed(
+    generateId,
+    existingCrewContexts,
     boards,
     chatRooms,
-    posts,
-    polls,
-    pollEligibleVoters,
-    pollVotes,
-    meetups,
-    meetupAttendances,
-    joinRequests,
-    invitations,
-    notifications,
-    chatMessages,
+    existingPostsByCrewId,
+    chatMessages.length,
+  );
+
+  return {
+    profiles: [...profiles, ...bulk.profiles],
+    crews: [...crews, ...bulk.newCrews],
+    crewMemberships: [...crewMemberships, ...bulk.memberships],
+    boards: [...boards, ...bulk.boards],
+    chatRooms: [...chatRooms, ...bulk.chatRooms],
+    posts: [...posts, ...bulk.posts],
+    polls: [...polls, ...bulk.polls],
+    pollEligibleVoters: [...pollEligibleVoters, ...bulk.pollEligibleVoters],
+    pollVotes: [...pollVotes, ...bulk.pollVotes],
+    meetups: [...meetups, ...bulk.meetups],
+    meetupAttendances: [...meetupAttendances, ...bulk.meetupAttendances],
+    joinRequests: [...joinRequests, ...bulk.joinRequests],
+    invitations: [...invitations, ...bulk.invitations],
+    notifications: [...notifications, ...bulk.notifications],
+    chatMessages: [...chatMessages, ...bulk.chatMessages],
   };
 }
 
@@ -365,8 +392,14 @@ function replaceArrayContents<T>(target: T[], source: readonly T[]): void {
  * 유니온으로 뭉개져 `store[key]`/`seed[key]`의 대응이 타입 수준에서 깨진다(연결이 없는
  * 유니온이라 `any` 없이는 타입체크를 통과할 수 없다). 엔티티가 늘면 아래 목록에 한 줄
  * 추가한다.
+ *
+ * `idCounter`를 먼저 초기값으로 되돌린 뒤 `createSeed()`를 다시 호출한다 — Task 010부터
+ * `createSeed()`가 대량 시드 생성에 `generateId`를 수천 번 호출하므로(`./seed/index.ts`),
+ * 이 초기화가 없으면 두 번째 호출부터 모든 id가 처음과 달라져 "결정적 생성"이 reset
+ * 경계에서 깨진다.
  */
 export function resetFixtures(): void {
+  idCounter = INITIAL_ID_COUNTER;
   const seed = createSeed();
   replaceArrayContents(store.profiles, seed.profiles);
   replaceArrayContents(store.crews, seed.crews);
