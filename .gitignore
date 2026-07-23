@@ -44,3 +44,6 @@ next-env.d.ts
 .serena/
 shrimp_data/
 .claude/agent-memory/
+
+# supabase (CLI local link cache)
+supabase/.temp/
