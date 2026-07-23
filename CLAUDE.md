@@ -59,6 +59,10 @@ Next.js 16.2.11(App Router) + React 19.2.4 + TypeScript(strict) + Tailwind CSS v
 
 ### 화면 우선 개발 (Mock First Development)
 
+- **UI는 shadcn/ui 컴포넌트로 조립하고, 시각 설계는 `frontend-design` 스킬을 먼저 읽고 시작합니다.**
+  - 새 UI 요소가 필요하면 **직접 만들기 전에 `shadcn` MCP 레지스트리에서 먼저 찾습니다**(`search_items_in_registries` → `view_items_in_registries` → `get_add_command_for_items`). 레지스트리에 있는 것을 손으로 다시 짜면 접근성 처리와 다크모드 토큰 연결을 매번 새로 검증해야 합니다. 없을 때만 `src/components/ui/`의 기존 프리미티브를 조합해 만듭니다.
+  - 화면을 새로 만들거나 기존 화면의 인상을 바꾸는 작업은 **`frontend-design` 스킬을 먼저 호출**해 미적 방향·타이포그래피 기준을 잡고 시작합니다. 기본값을 그대로 쓴 "템플릿처럼 보이는" 화면을 피하기 위한 절차입니다.
+  - 색·간격·폰트는 임의 값을 쓰지 않고 `globals.css`의 `@theme inline` 디자인 토큰을 씁니다(다크모드 대응이 토큰에 걸려 있습니다).
 - 화면은 모두 component 단위로 만듭니다.
 - 화면의 모든 컴포넌트는 `http://localhost:3000/sample`에 보이도록 배치합니다.
   - 쇼케이스는 `src/app/sample/page.tsx`에 만듭니다. 카테고리 섹션 + 앵커 내비 구조로 두고, **컴포넌트를 새로 만들 때마다 여기 등록**합니다. 등록을 미루면 쇼케이스가 곧 실제 컴포넌트 목록과 어긋나 존재 의의를 잃습니다.
