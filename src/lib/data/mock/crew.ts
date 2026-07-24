@@ -1,6 +1,9 @@
 
 import { crewColorIndex } from "@/lib/rules/crew-color-hash";
-import { createCrewMembershipStatus } from "@/lib/rules/crew-membership-transition";
+import {
+  createCrewMembershipStatus,
+  transitionCrewMembershipStatus,
+} from "@/lib/rules/crew-membership-transition";
 import type {
   Board,
   ChatRoom,
@@ -197,6 +200,52 @@ export async function setCrewMembershipRole(
   );
   if (!membership) return err("not_found", `crew ${crewId} 의 멤버십(${profileId})을 찾을 수 없다.`);
   membership.role = role;
+  return ok(membership);
+}
+
+/**
+ * 가입 신청 승인(FR-023) — 멤버십 쪽 반영. 2.4절 `requested --approve_request--> active`를
+ * `transitionCrewMembershipStatus`(`lib/rules`)로 검증해 그대로 옮긴다 — 상태 하드코딩 대신
+ * 규칙 함수를 거치므로, 이미 처리된(활성이 아닌) 멤버십에 대한 승인 시도는 `conflict`로
+ * 걸러진다(FR-023 E1 "다른 임원이 먼저 처리"의 멤버십 쪽 방어선 — `JoinRequest.status`의
+ * 1차 방어는 `decideJoinRequest`가 맡는다).
+ */
+export async function approveCrewMembership(
+  crewId: Id,
+  profileId: Id,
+): Promise<DataResult<CrewMembership>> {
+  const membership = store.crewMemberships.find(
+    (m) => m.crewId === crewId && m.profileId === profileId,
+  );
+  if (!membership) return err("not_found", `crew ${crewId} 의 멤버십(${profileId})을 찾을 수 없다.`);
+  const next = transitionCrewMembershipStatus(membership.status, "approve_request");
+  if (!next) {
+    return err("conflict", `crew ${crewId} 의 멤버십(${profileId})은 승인 가능한 상태가 아니다.`);
+  }
+  membership.status = next;
+  membership.joinedAt = new Date().toISOString();
+  return ok(membership);
+}
+
+/**
+ * 가입 신청 반려(FR-023) — 멤버십 쪽 반영. 2.4절 `requested --reject_request--> rejected`.
+ * 신청자 본인의 자진 철회(`withdrawPendingCrewMembership`)와 결과 상태(`rejected`)는 같지만
+ * 호출 맥락(오너·임원의 결정 vs 본인의 철회)이 달라 함수를 나눴다 — "누가 끝냈는지"는
+ * `JoinRequest.decidedBy`(반려는 값 있음, 철회는 `null`)로 구분된다(I-040).
+ */
+export async function rejectCrewMembership(
+  crewId: Id,
+  profileId: Id,
+): Promise<DataResult<CrewMembership>> {
+  const membership = store.crewMemberships.find(
+    (m) => m.crewId === crewId && m.profileId === profileId,
+  );
+  if (!membership) return err("not_found", `crew ${crewId} 의 멤버십(${profileId})을 찾을 수 없다.`);
+  const next = transitionCrewMembershipStatus(membership.status, "reject_request");
+  if (!next) {
+    return err("conflict", `crew ${crewId} 의 멤버십(${profileId})은 반려 가능한 상태가 아니다.`);
+  }
+  membership.status = next;
   return ok(membership);
 }
 

@@ -27,9 +27,16 @@ import { cn } from "@/lib/utils"
  * 강도로 매핑된다(`low` → polite, `high` → assertive). 이 파일은 `variant: "destructive"`일
  * 때만 `priority: "high"`를 준다 — "파괴적 알림만 assertive"라는 지시를 여기 한 곳에서 강제하고,
  * 호출부가 매번 priority를 판단하지 않게 한다.
+ *
+ * **액션 버튼(Task 023, FR-070 AC4 "토스트 클릭 → 이동 + 읽음 처리")**: `showToast`가 이미
+ * 5초 자동소멸(NFR-021과 별개로 시간 압박이 있는 위젯)이라 토스트 전체를 클릭 영역으로 만들면
+ * 오탐(실수로 닫기 전에 다른 곳을 눌러 이동)이 늘어난다고 판단해, Base UI가 이 목적으로 이미
+ * 제공하는 `ToastObject.actionProps`(공식 "action button" 확장점, `Toast.Action`)를 그대로
+ * 쓴다 — 새 클릭 오버레이를 직접 만들지 않는다. `actionLabel`/`onAction`을 준 토스트만 버튼이
+ * 보이고, 기존 호출부(`ToastTriggerPreview` 등)는 그 필드를 안 주므로 동작이 그대로다.
  */
 
-const toastManager = ToastPrimitive.createToastManager()
+const toastManager = ToastPrimitive.createToastManager<{ actionLabel?: string }>()
 
 export type ToastVariant = "default" | "destructive"
 
@@ -51,15 +58,20 @@ export interface ShowToastOptions {
   variant?: ToastVariant
   /** ms. 0이면 자동으로 닫히지 않는다. 생략하면 Base UI 기본값(5000ms)을 쓴다. */
   timeout?: number
+  /** 액션 버튼 라벨. `onAction`과 함께 줘야 버튼이 보인다(위 모듈 docstring 참고). */
+  actionLabel?: string
+  onAction?: () => void
 }
 
-function show({ title, description, variant = "default", timeout }: ShowToastOptions) {
+function show({ title, description, variant = "default", timeout, actionLabel, onAction }: ShowToastOptions) {
   return toastManager.add({
     title,
     description,
     type: variant,
     priority: variant === "destructive" ? "high" : "low",
     timeout,
+    data: actionLabel ? { actionLabel } : undefined,
+    actionProps: onAction ? { onClick: onAction } : undefined,
   })
 }
 
@@ -142,6 +154,19 @@ function ToastDescription({ className, ...props }: ToastPrimitive.Description.Pr
   )
 }
 
+function ToastAction({ className, ...props }: ToastPrimitive.Action.Props) {
+  return (
+    <ToastPrimitive.Action
+      data-slot="toast-action"
+      className={cn(
+        "shrink-0 self-center rounded-md px-2 py-1 text-xs font-medium text-foreground underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
 function ToastClose({ className, ...props }: ToastPrimitive.Close.Props) {
   return (
     <ToastPrimitive.Close
@@ -164,6 +189,9 @@ function ToastList() {
         {t.title && <ToastTitle />}
         {t.description && <ToastDescription />}
       </ToastContent>
+      {t.actionProps && t.data?.actionLabel && (
+        <ToastAction {...t.actionProps}>{t.data.actionLabel}</ToastAction>
+      )}
       <ToastClose />
     </ToastRoot>
   ))
@@ -186,4 +214,4 @@ export function Toaster() {
   )
 }
 
-export { ToastRoot, ToastContent, ToastTitle, ToastDescription, ToastClose, ToastViewport }
+export { ToastRoot, ToastContent, ToastTitle, ToastDescription, ToastAction, ToastClose, ToastViewport }

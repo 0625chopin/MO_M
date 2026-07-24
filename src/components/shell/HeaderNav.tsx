@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { getAccountNavItems, getPrimaryNavItems, type NavItem } from "./nav-items";
 
 import type { AuthSession } from "./auth-session";
+import type { ReactNode } from "react";
 
 /**
  * 전역 헤더 내비게이션(PRD §5 "헤더 — 전역 공통"). 표현 컴포넌트 — 세션은 props로만 받는다
@@ -31,8 +32,22 @@ import type { AuthSession } from "./auth-session";
  *   면적 없이 전달한다.
  * - 워드마크를 모노 서체로 세웠다. `mo_im`은 소문자와 언더스코어로 된 식별자꼴 이름이라
  *   모노가 그 성격을 그대로 읽어 준다.
+ *
+ * **`notificationBell`(Task 023)**: `nav-items.ts`가 만드는 정적 "알림" 항목(세션의
+ * `unreadNotificationCount` 배지) 대신, 그 자리에 실시간 구독을 갖는
+ * `NotificationBellServerContainer`(서버에서 조립돼 슬롯으로 내려온 노드)를 끼워 넣는다.
+ * `HeaderNav` 자신은 여전히 `'use client'`라 그 컨테이너를 직접 import할 수 없으므로(RSC
+ * 경계), 부모(`AppShell`, 서버 컴포넌트)가 조립해 prop으로 넘기는 합성 패턴을 쓴다. 슬롯이
+ * 없으면(예: `/sample`에서 `AppShell`을 데모로 그릴 때, 또는 게스트라 `null`이 내려온 경우)
+ * 기존 정적 `NavLink`로 안전하게 폴백한다.
  */
-export function HeaderNav({ session }: { session: AuthSession }) {
+export function HeaderNav({
+  session,
+  notificationBell,
+}: {
+  session: AuthSession;
+  notificationBell?: ReactNode;
+}) {
   const pathname = usePathname();
   const homeHref = session.status === "authenticated" ? "/home" : "/";
 
@@ -78,9 +93,13 @@ export function HeaderNav({ session }: { session: AuthSession }) {
           aria-label={strings.common.a11y.primaryNav}
           className="hidden flex-1 items-center gap-1 md:flex"
         >
-          {primaryItems.map((item) => (
-            <NavLink key={item.key} item={item} active={pathname === item.href} />
-          ))}
+          {primaryItems.map((item) =>
+            item.key === "notifications" && notificationBell ? (
+              <span key={item.key}>{notificationBell}</span>
+            ) : (
+              <NavLink key={item.key} item={item} active={pathname === item.href} />
+            ),
+          )}
         </nav>
 
         <nav

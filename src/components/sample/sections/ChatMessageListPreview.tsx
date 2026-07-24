@@ -4,6 +4,7 @@ import type { ChatTimelineItem } from "@/components/chat/message-view-models";
 import { MessageList } from "@/components/chat/MessageList";
 
 export interface ChatMessageListPreviewProps {
+  roomId: string;
   messages: ChatTimelineItem[];
   viewerProfileId: string;
   hasMore?: boolean;
@@ -24,12 +25,14 @@ export interface ChatMessageListPreviewProps {
  * docstring과 같은 이유).
  */
 export function ChatMessageListPreview({
+  roomId,
   messages,
   viewerProfileId,
   hasMore = false,
 }: ChatMessageListPreviewProps) {
   return (
     <MessageList
+      roomId={roomId}
       messages={messages}
       viewerProfileId={viewerProfileId}
       hasMore={hasMore}

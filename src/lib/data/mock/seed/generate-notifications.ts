@@ -30,6 +30,12 @@ export function generateNotifications(
   meetups: readonly Meetup[],
   staffMemberships: readonly CrewMembership[],
   removedMemberships: readonly CrewMembership[],
+  /**
+   * poll_closed 알림 클릭 시 "해당 제안글 상세로 이동"(FR-045 AC4)하려면 게시글 상세 경로에
+   * crewId·postId가 둘 다 필요하다(`getPostDetailHref`, R-016 — 경로 문자열이 아니라 리소스
+   * ID를 저장). Poll은 postId만 갖고 crewId는 postId → boardId → crewId 조인으로 얻는다.
+   */
+  crewIdByBoardId: Map<Id, Id>,
 ): Notification[] {
   const notifications: Notification[] = [];
 
@@ -66,7 +72,14 @@ export function generateNotifications(
   for (const poll of closedPolls) {
     const post = postsByPostId.get(poll.postId);
     if (!post || !poll.decidedAt) continue;
-    push(post.authorId, "poll_closed", { pollId: poll.id, outcome: poll.result }, poll.decidedAt);
+    const crewId = crewIdByBoardId.get(post.boardId);
+    if (!crewId) continue;
+    push(
+      post.authorId,
+      "poll_closed",
+      { pollId: poll.id, outcome: poll.result, crewId, postId: post.id },
+      poll.decidedAt,
+    );
   }
 
   for (const meetup of meetups) {

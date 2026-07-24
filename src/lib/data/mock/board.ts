@@ -10,6 +10,12 @@ export async function getBoardByCrewId(crewId: Id): Promise<Board | null> {
   return store.boards.find((b) => b.crewId === crewId) ?? null;
 }
 
+/** id 역방향 조회 — 채팅 게시글 카드(PostLinkCard, Task 020C)가 `Post.boardId`에서 소속
+ *  크루를 알아낼 때 쓴다(FR-052 E1 "다른 크루" 판정, R-016 — 저장은 리소스 ID만). */
+export async function getBoardById(id: Id): Promise<Board | null> {
+  return store.boards.find((b) => b.id === id) ?? null;
+}
+
 export interface ListPostsQuery {
   type?: PostType;
   /** 이전 페이지 마지막 항목의 id. 그보다 오래된(작성일 기준) 게시글부터 반환한다. */

@@ -1,6 +1,8 @@
 import { Geist_Mono, Noto_Sans_KR } from "next/font/google";
 
+import { ToastHostContainer } from "@/components/notifications/ToastHostContainer";
 import { AppShell } from "@/components/shell/AppShell";
+import { isAuthenticated } from "@/components/shell/auth-session";
 import { getAuthSession } from "@/components/shell/get-auth-session";
 import { Toaster } from "@/components/ui/toast";
 import { strings } from "@/lib/strings";
@@ -81,6 +83,11 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col">
         <AppShell session={session}>{children}</AppShell>
         <Toaster />
+        {/* ToastHost(Task 023, D-030 ④) — 인증·전역 경계는 레이아웃에서 처리한다. `session`을
+            여기서 좁혀 넘기는 이유는 `getAuthSession()`을 이 파일이 이미 호출해 뒀기 때문이다
+            (`ToastHostContainer` 자신이 다시 조회하게 하지 않는다 — 이 지점 하나뿐인 배치라
+            반복 조회의 이점이 없다). */}
+        {isAuthenticated(session) && <ToastHostContainer profileId={session.profileId} />}
       </body>
     </html>
   );

@@ -1,20 +1,29 @@
 import { Loader2Icon } from "lucide-react";
 
 import type { CrewCardViewModel } from "@/components/crews/crew-explore-view-models";
+import type {
+  JoinRequestRowViewModel,
+  MemberRowViewModel,
+} from "@/components/crews/crew-member-view-models";
 import { CrewCreateForm } from "@/components/crews/CrewCreateForm";
 import { CrewGrid } from "@/components/crews/CrewGrid";
 import { CrewGridSkeleton } from "@/components/crews/CrewGridSkeleton";
 import { CrewHome } from "@/components/crews/CrewHome";
 import { CrewHomeSkeleton } from "@/components/crews/CrewHomeSkeleton";
 import { CrewIntroPreview } from "@/components/crews/CrewIntroPreview";
+import { CrewMembersSkeleton } from "@/components/crews/CrewMembersSkeleton";
 import { CrewSearchBar } from "@/components/crews/CrewSearchBar";
+import { InviteMemberDialog } from "@/components/crews/InviteMemberDialog";
 import { JoinRequestButton } from "@/components/crews/JoinRequestButton";
+import { JoinRequestPanel } from "@/components/crews/JoinRequestPanel";
+import { MemberList } from "@/components/crews/MemberList";
 import { PrivateCrewNotice } from "@/components/crews/PrivateCrewNotice";
 import { RouteErrorBoundary } from "@/components/errors/RouteErrorBoundary";
 import { PreviewFrame } from "@/components/sample/PreviewFrame";
 import { CrewExploreErrorStatePreview } from "@/components/sample/sections/CrewExploreErrorStatePreview";
 import { defineSection } from "@/components/sample/showcase-types";
 import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/error-state";
 import { strings } from "@/lib/strings";
 
 /** `CrewGrid`·`CrewCard` 데모용 고정 데이터 — 실제 `CrewExploreContainer`가 `fetchCrewCardsPage`로
@@ -49,8 +58,99 @@ const SAMPLE_CREW_CARDS: CrewCardViewModel[] = [
   },
 ];
 
+/** `MemberList` 데모용 고정 데이터(Task 017A) — 오너가 보는 기본 목록. 오너(본인, 탈퇴 불가
+ *  안내)·임원 2명·일반 크루원 1명으로 역할 정렬(오너 > 임원 > 일반)을 보여준다. */
+const SAMPLE_MEMBER_ROWS: MemberRowViewModel[] = [
+  {
+    profileId: "profile-1",
+    displayName: "서지훈",
+    handle: "seo_runs",
+    avatarUrl: null,
+    role: "owner",
+    isSelf: true,
+    canAppoint: false,
+    canLeave: false,
+    leaveBlockedReason: strings.crew.members.leave.errors.ownerMustTransferOrDisband,
+  },
+  {
+    profileId: "profile-2",
+    displayName: "김유나",
+    handle: "yuna_book",
+    avatarUrl: null,
+    role: "staff",
+    isSelf: false,
+    canAppoint: true,
+    canLeave: false,
+    leaveBlockedReason: null,
+  },
+  {
+    profileId: "profile-3",
+    displayName: "박민준",
+    handle: "minjun",
+    avatarUrl: null,
+    role: "member",
+    isSelf: false,
+    canAppoint: true,
+    canLeave: false,
+    leaveBlockedReason: null,
+  },
+];
+
+/** `MemberList` "빈" 패널 — 갓 만든 크루, 오너뿐이라 임명·강퇴 대상 자체가 없다. */
+const SAMPLE_MEMBER_ROWS_OWNER_ONLY: MemberRowViewModel[] = [SAMPLE_MEMBER_ROWS[0]];
+
+/** `JoinRequestPanel` 데모용 고정 데이터(Task 017A, I-040). `history`가 승인·반려·철회 셋을
+ *  모두 담아 "반려됨"과 "철회함"이 다른 배지로 구분되는 것을 "처리 내역" 탭에서 바로 보여준다. */
+const SAMPLE_PENDING_REQUESTS: JoinRequestRowViewModel[] = [
+  {
+    id: "join-request-1",
+    requesterDisplayName: "박민준",
+    requesterHandle: "minjun",
+    requesterAvatarUrl: null,
+    message: "이번 주 토요일 러닝 같이 하고 싶어요!",
+    status: "pending",
+  },
+  {
+    id: "join-request-2",
+    requesterDisplayName: "김유나",
+    requesterHandle: "yuna_book",
+    requesterAvatarUrl: null,
+    message: null,
+    status: "pending",
+  },
+];
+
+const SAMPLE_HISTORY_REQUESTS: JoinRequestRowViewModel[] = [
+  {
+    id: "join-request-3",
+    requesterDisplayName: "이서연",
+    requesterHandle: "seoyeon",
+    requesterAvatarUrl: null,
+    message: "가입하고 싶어요",
+    status: "approved",
+  },
+  {
+    id: "join-request-4",
+    requesterDisplayName: "최도현",
+    requesterHandle: "dohyun",
+    requesterAvatarUrl: null,
+    message: null,
+    status: "rejected",
+  },
+  {
+    id: "join-request-5",
+    requesterDisplayName: "정하늘",
+    requesterHandle: "haneul",
+    requesterAvatarUrl: null,
+    message: "지나가다 관심 생겨서요",
+    // I-040 — 신청자 본인이 철회한 건. "반려됨"과 다른 배지("철회함")로 렌더된다.
+    status: "withdrawn",
+  },
+];
+
 /**
- * SC-07~09 크루 탐색·개설·크루 홈(F005·F006·F008·F011, Task 016A·016B). 실제 라우트는
+ * SC-07~09, SC-14 크루 탐색·개설·크루 홈·멤버 관리(F005·F006·F008·F009·F010·F011~F015·F032,
+ * Task 016A·016B·017A). 실제 라우트는
  * `/crews`·`/crews/new`·`/crews/[crewId]` — 개설 폼은 실제 컴포넌트를 그대로 등록했고(부작용은
  * 세션이 있어야 발동하는 리다이렉트뿐이라 `/sample`의 게스트 세션에서는 `sessionExpired` 폼
  * 오류로 안전하게 막힌다), 크루 홈은 `CrewHomeContainer`(서버 컴포넌트, 실제 크루 조회가 필요)
@@ -67,13 +167,23 @@ const SAMPLE_CREW_CARDS: CrewCardViewModel[] = [
  * 안전하다(쓰기가 없다). `CrewCard`는 별도 항목을 만들지 않았다 — `CrewGrid` 자신이 카드 3장을
  * 렌더해 보여주므로 단독 항목이 중복이라고 판단했다(`BoardListItem`이 `BoardList` 항목 안에서만
  * 보이는 것과 같은 이유).
+ *
+ * **`MemberList`·`InviteMemberDialog`·`JoinRequestPanel`(Task 017A)** — 실제 라우트는
+ * `/crews/[crewId]/members`. `MemberList`의 "임원 임명"·"탈퇴" 버튼과 `InviteMemberDialog`의
+ * "초대 보내기"는 실제 Server Action을 그대로 호출한다 — `/sample`은 게스트 세션이라 눌러도
+ * `sessionExpired` 폼 오류로 안전하게 막힌다(`CrewCreateForm`과 같은 근거). `JoinRequestPanel`의
+ * "오류" 패널은 버튼 클릭이 아니라 `ErrorState` 원자로 FR-023 E1(동시성 — 다른 임원이 먼저
+ * 처리)을 정적으로 재현한다 — `useActionState`의 폼 오류는 실제 제출 후에만 생기는 값이라
+ * `/sample`이 그 자리를 미리 채울 수 없기 때문이다(`CrewExploreErrorStatePreview`와 같은 이유,
+ * 다만 이 경우는 클로저가 필요 없어 별도 클라이언트 컴포넌트 파일을 만들지 않았다). "처리 내역"
+ * 탭은 I-040이 요구하는 "반려됨"·"철회함" 구분을 승인(`approved`)과 나란히 보여준다.
  */
 export const crewsSection = defineSection({
   id: "crews",
-  label: "크루 탐색·개설·홈",
-  title: "크루 탐색 · 크루 개설 · 크루 홈",
+  label: "크루 탐색·개설·홈·멤버 관리",
+  title: "크루 탐색 · 크루 개설 · 크루 홈 · 멤버 관리",
   description:
-    "FR-010·011·014·022(D-007·D-008·D-014·D-016·D-017). 실제 라우트는 /crews · /crews/new · /crews/[crewId] — 크루 탐색은 검색바·카테고리 필터·카드 그리드·무한 스크롤·가입됨 배지(CrewSearchBar·CrewGrid·CrewCard), 크루 홈은 public/private × 소속/비소속 조합 중 실제로 다른 모습이 필요한 세 갈래(CrewHome·CrewIntroPreview·PrivateCrewNotice)만 표현 컴포넌트로 나눴습니다.",
+    "FR-010·011·014·020·022·023·024·026(D-002·D-005·D-007·D-008·D-014·D-016·D-017). 실제 라우트는 /crews · /crews/new · /crews/[crewId] · /crews/[crewId]/members — 크루 탐색은 검색바·카테고리 필터·카드 그리드·무한 스크롤·가입됨 배지(CrewSearchBar·CrewGrid·CrewCard), 크루 홈은 public/private × 소속/비소속 조합 중 실제로 다른 모습이 필요한 세 갈래(CrewHome·CrewIntroPreview·PrivateCrewNotice)만 표현 컴포넌트로, 멤버 관리는 역할 정렬 목록·초대 다이얼로그·가입 신청 승인/반려 탭(MemberList·InviteMemberDialog·JoinRequestPanel)으로 나눴습니다.",
   items: [
     {
       name: "CrewCreateForm",
@@ -298,6 +408,95 @@ export const crewsSection = defineSection({
           <PreviewFrame height={160}>
             <div className="p-4">
               <CrewExploreErrorStatePreview />
+            </div>
+          </PreviewFrame>
+        ),
+      },
+    },
+    {
+      name: "멤버 관리 — 역할 정렬 목록 (MemberList)",
+      note: "실제 컴포넌트입니다(FR-015·FR-024·FR-026, D-002, Task 017A). 정렬(오너 > 임원 > 일반)·권한 판정은 CrewMembersContainer가 끝낸 값을 props로만 받습니다. 오너(본인) 행은 오너 이양·해산 기능이 아직 없어 탈퇴 버튼 대신 안내 문구가 뜨고, 임원·일반 행은 '임원으로 임명'/'임원 해임' 버튼이 실제 setCrewMemberRoleAction을 호출합니다 — 게스트 세션이라 눌러도 세션 만료 오류로 막힙니다.",
+      panels: {
+        default: (
+          <PreviewFrame height={340}>
+            <div className="p-4">
+              <MemberList crewId="crew-1" members={SAMPLE_MEMBER_ROWS} />
+            </div>
+          </PreviewFrame>
+        ),
+        loading: (
+          <PreviewFrame height={220}>
+            <CrewMembersSkeleton />
+          </PreviewFrame>
+        ),
+        empty: (
+          <PreviewFrame height={140}>
+            <div className="p-4">
+              <MemberList crewId="crew-1" members={SAMPLE_MEMBER_ROWS_OWNER_ONLY} />
+            </div>
+          </PreviewFrame>
+        ),
+        error: (
+          <PreviewFrame height={260}>
+            <RouteErrorBoundary kind="forbidden" />
+          </PreviewFrame>
+        ),
+      },
+    },
+    {
+      name: "멤버 관리 — 크루원 초대 (InviteMemberDialog)",
+      note: "실제 컴포넌트입니다(FR-020, Task 017A). 검색은 UserSearchField(계정 설정과 공유, Task 015B)를 그대로 재사용하고 결과 카드 footer에 '초대 보내기' 버튼을 끼워 넣습니다. /sample은 게스트 세션이라 제출하면 '로그인이 만료됐어요' 폼 오류가 뜹니다 — checkPermission(crew:invite_member)이 실제로 작동한다는 증거입니다(CrewCreateForm과 같은 패턴). 빈·오류 패널은 의도적으로 비웠습니다 — 제출 오류는 useActionState 내부 상태라 정적 prop으로 미리 주입할 수 없고(CrewCreateForm 전례와 동일), '검색 결과 없음'은 이 컴포넌트가 아니라 UserSearchField 자신의 상태라 account.tsx에 이미 등록돼 있어 여기서 중복 등록하지 않습니다.",
+      panels: {
+        default: (
+          <PreviewFrame height={200}>
+            <div className="mx-auto w-full max-w-sm p-4">
+              <InviteMemberDialog crewId="crew-1" />
+            </div>
+          </PreviewFrame>
+        ),
+        loading: (
+          <PreviewFrame height={100}>
+            <div className="mx-auto w-full max-w-sm p-4">
+              <Button disabled className="w-full">
+                <Loader2Icon aria-hidden="true" className="animate-spin" />
+                {strings.crew.members.invite.submitPending}
+              </Button>
+            </div>
+          </PreviewFrame>
+        ),
+      },
+    },
+    {
+      name: "멤버 관리 — 가입 신청 승인/반려 (JoinRequestPanel)",
+      note: "실제 컴포넌트입니다(FR-023, D-002, Task 017A, I-040 해소). '처리 내역' 탭에서 승인(approved)·반려(rejected)·철회(withdrawn) 세 상태를 서로 다른 배지로 보여줍니다 — I-040이 요구하는 대로 신청자 본인이 철회한 건을 오너·임원이 반려한 건과 구분합니다. '대기 중' 탭의 승인·반려 버튼은 실제 decideJoinRequestAction을 호출합니다(게스트 세션이라 세션 만료 오류로 막힙니다).",
+      panels: {
+        default: (
+          <PreviewFrame height={420}>
+            <div className="p-4">
+              <JoinRequestPanel
+                crewId="crew-1"
+                pending={SAMPLE_PENDING_REQUESTS}
+                history={SAMPLE_HISTORY_REQUESTS}
+              />
+            </div>
+          </PreviewFrame>
+        ),
+        loading: (
+          <PreviewFrame height={220}>
+            <CrewMembersSkeleton />
+          </PreviewFrame>
+        ),
+        empty: (
+          <PreviewFrame height={200}>
+            <div className="p-4">
+              <JoinRequestPanel crewId="crew-1" pending={[]} history={[]} />
+            </div>
+          </PreviewFrame>
+        ),
+        error: (
+          <PreviewFrame height={140}>
+            <div className="p-4">
+              <ErrorState title={strings.crew.members.requests.errors.alreadyDecided} />
             </div>
           </PreviewFrame>
         ),

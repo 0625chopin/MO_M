@@ -1,4 +1,5 @@
 
+import { NotificationBellServerContainer } from "@/components/notifications/NotificationBellServerContainer";
 import { strings } from "@/lib/strings";
 
 import { HeaderNav } from "./HeaderNav";
@@ -48,7 +49,12 @@ export function AppShell({
         </a>
       )}
 
-      <HeaderNav session={session} />
+      {/* NotificationBell(Task 023, D-030 ①) — 서버 컴포넌트(`AppShell`)가 조립해 클라이언트
+          컴포넌트(`HeaderNav`)에 슬롯으로 내려준다. `HeaderNav`가 이 컨테이너를 직접 import할
+          수 없다(RSC 경계 — 클라이언트 모듈은 서버 전용 컴포넌트를 import하지 못한다). 게스트면
+          `NotificationBellServerContainer`가 `null`을 렌더하므로 `HeaderNav`는 그때 기존
+          정적 배지 링크로 폴백한다. */}
+      <HeaderNav session={session} notificationBell={<NotificationBellServerContainer />} />
 
       {/* 모바일 하단 여백은 탭바 높이(3.5rem)와 iOS 홈 인디케이터 영역을 함께 비운다 —
           `MobileTabBar`가 같은 `env(safe-area-inset-bottom)`을 쓰므로 두 값은 함께 움직인다.

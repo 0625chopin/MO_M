@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 
 import { Composer } from "@/components/chat/Composer";
 import { ConnectionBanner } from "@/components/chat/ConnectionBanner";
@@ -39,6 +39,50 @@ function isMessageViewModel(payload: unknown): payload is MessageViewModel {
     "roomId" in payload &&
     "senderId" in payload
   );
+}
+
+/**
+ * 브라우저 온/오프라인 구독(9일차 런타임 blocker 수정) — `hooks/use-media-query.ts`와 같은
+ * 이유로 `useState` + `useEffect` 대신 `useSyncExternalStore`를 쓴다. Node 20+가 `navigator`
+ * 전역을 제공하지만(WHATWG fetch 호환용) `navigator.onLine`은 없다(`undefined`) — 예전에
+ * `typeof navigator !== "undefined" && !navigator.onLine`을 `useState`의 lazy initializer로
+ * 렌더 중 바로 계산했더니, 서버(Node)에서는 `!undefined` → `true`로 "disconnected"를, 브라우저
+ * 에서는 보통 `navigator.onLine === true`라 "connected"를 렌더해 하이드레이션이 갈렸다
+ * (`ConnectionBanner`가 있다/없다는 DOM 구조 차이 — React #418). `getServerSnapshot`이 항상
+ * `true`를 반환해 SSR·최초 하이드레이션은 "온라인"으로 통일하고, 실제 값은 마운트 후
+ * `online`/`offline` 리스너가 갱신한다.
+ */
+function subscribeToBrowserOnlineStatus(onStoreChange: () => void): () => void {
+  window.addEventListener("online", onStoreChange);
+  window.addEventListener("offline", onStoreChange);
+  return () => {
+    window.removeEventListener("online", onStoreChange);
+    window.removeEventListener("offline", onStoreChange);
+  };
+}
+
+function getBrowserOnlineSnapshot(): boolean {
+  return navigator.onLine;
+}
+
+function getServerOnlineSnapshot(): boolean {
+  return true;
+}
+
+/** 구독할 이벤트가 없다 — `getServerSnapshot`(false)과 `getSnapshot`(true)의 불일치를
+ *  React가 하이드레이션 직후 자동으로 감지해 한 번 재렌더한다(별도 `setState` 불필요, 그래서
+ *  `useEffect(() => setMounted(true), [])`와 달리 react-hooks/set-state-in-effect에 걸리지
+ *  않는다). `hooks/use-media-query.ts`와 같은 `useSyncExternalStore` 관용구. */
+function subscribeNever(): () => void {
+  return () => {};
+}
+
+function getMountedTrue(): boolean {
+  return true;
+}
+
+function getMountedFalseOnServer(): boolean {
+  return false;
 }
 
 /**
@@ -101,13 +145,40 @@ export function MessageRoomContainer({
   const [cursor, setCursor] = useState(initialCursor);
   const [pending, setPending] = useState<Map<string, ChatTimelineItem>>(new Map());
   const [isLoadingMore, startLoadMoreTransition] = useTransition();
-  // 초기값을 effect가 아니라 lazy initializer(렌더 중)에서 계산한다 — effect 안에서
-  // 동기적으로 setState하면 react-hooks/set-state-in-effect가 걸린다(추가 렌더 1회 발생).
-  // SSR에서는 `navigator`가 없으므로 "connected"로 시작하고, 브라우저에서 이미 오프라인이면
-  // 첫 렌더부터 바로 반영한다.
-  const [connectionStatus, setConnectionStatus] = useState<ChatConnectionStatus>(() =>
-    typeof navigator !== "undefined" && !navigator.onLine ? "disconnected" : "connected",
+
+  const isBrowserOnline = useSyncExternalStore(
+    subscribeToBrowserOnlineStatus,
+    getBrowserOnlineSnapshot,
+    getServerOnlineSnapshot,
   );
+  // 초기값은 항상 "connected"로 고정한다 — SSR·최초 하이드레이션이 항상 이 값이므로 일치한다.
+  const [connectionStatus, setConnectionStatus] = useState<ChatConnectionStatus>("connected");
+  // `isBrowserOnline`의 실제 전이(마운트 시점에 이미 오프라인이었던 경우 포함)를
+  // `connectionStatus` 상태 기계에 반영한다. `useEffect`에서 setState하면
+  // react-hooks/set-state-in-effect가 걸리므로, React가 공식으로 허용하는 "렌더 중 상태 조정"
+  // 패턴을 쓴다(참고: react.dev "Adjusting some state when a prop changes") — 이전 렌더의
+  // `isBrowserOnline`을 별도 state로 들고 있다가 값이 바뀌면 같은 렌더 패스 안에서 두 state를
+  // 함께 갱신한다. `useEffect` 한 틱을 더 쓰지 않아 깜빡임도 없다.
+  const [prevIsBrowserOnline, setPrevIsBrowserOnline] = useState(isBrowserOnline);
+  if (isBrowserOnline !== prevIsBrowserOnline) {
+    setPrevIsBrowserOnline(isBrowserOnline);
+    setConnectionStatus((s) =>
+      nextChatConnectionStatus(s, isBrowserOnline ? "connection_restored" : "connection_lost"),
+    );
+  }
+
+  // 마운트 게이트(9일차 blocker 재발 수정) — `ConnectionBanner`는 SSR·최초 하이드레이션에서
+  // 항상 렌더하지 않는다(아래 return문). 위 `useSyncExternalStore` 기반 수정만으로 SSR HTML에서
+  // 배너가 사라짐을 직접 curl로 확인했지만(0건), 팀장 환경에서는 여전히 재현됐다는 보고가 있어
+  // — 원인을 완전히 못 좁힌 상태에서도 항상 안전한 이중 방어로 이 게이트를 더한다.
+  // `ConnectionBanner`는 원래 "끊겼다 복구될 때만 잠깐 나타나는" UX라 최초 렌더에 없어도 기능
+  // 손실이 아니다. `useEffect(() => setMounted(true), [])`로 하면 똑같이
+  // react-hooks/set-state-in-effect가 걸려서(직접 확인함) 위 `isBrowserOnline`과 같은 이유로
+  // `useSyncExternalStore`를 쓴다 — `getServerSnapshot`은 `false`, `getSnapshot`은 `true`를
+  // 고정 반환해 하이드레이션 직후 React가 자동으로 한 번 재렌더한다(구독할 이벤트가 없어
+  // `subscribeNever`는 아무것도 하지 않는다).
+  const mounted = useSyncExternalStore(subscribeNever, getMountedTrue, getMountedFalseOnServer);
+
   const seenIds = useRef(new Set(initialMessages.map((m) => m.id)));
   // 재연결 보충 조회(아래 effect)가 최신 `messages`를 읽되, 그 effect를 매 메시지 변경마다
   // 다시 돌리지 않기 위한 ref(D-029 — `MessageList`의 `onLoadMoreRef`와 같은 패턴).
@@ -137,22 +208,10 @@ export function MessageRoomContainer({
     return unsubscribe;
   }, [roomId]);
 
-  // 브라우저 온/오프라인 — NFR-009가 요구하는 "연결 상태 시각 표시"의 실제 신호다. 최초
-  // 오프라인 판정은 위 lazy initializer가 이미 반영했으므로 여기서는 이후 전이만 구독한다.
-  useEffect(() => {
-    function handleOffline() {
-      setConnectionStatus((s) => nextChatConnectionStatus(s, "connection_lost"));
-    }
-    function handleOnline() {
-      setConnectionStatus((s) => nextChatConnectionStatus(s, "connection_restored"));
-    }
-    window.addEventListener("offline", handleOffline);
-    window.addEventListener("online", handleOnline);
-    return () => {
-      window.removeEventListener("offline", handleOffline);
-      window.removeEventListener("online", handleOnline);
-    };
-  }, []);
+  // 브라우저 온/오프라인 — NFR-009가 요구하는 "연결 상태 시각 표시"의 실제 신호다. 별도
+  // `useEffect`로 `window` 리스너를 다시 달지 않는다 — 위 `isBrowserOnline`
+  // (`useSyncExternalStore`)이 이미 같은 이벤트를 구독하고 있고, 그 전이는 위 렌더 중 상태
+  // 조정 블록이 처리한다(리스너 중복 등록 방지).
 
   // 재연결 시 누락분 보충 조회(FR-051 E3·AC2) — "reconnecting"에 들어설 때 한 번만 실행한다.
   useEffect(() => {
@@ -277,11 +336,14 @@ export function MessageRoomContainer({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ConnectionBanner
-        status={connectionStatus}
-        onRetry={connectionStatus === "disconnected" ? handleManualReconnect : undefined}
-      />
+      {mounted && (
+        <ConnectionBanner
+          status={connectionStatus}
+          onRetry={connectionStatus === "disconnected" ? handleManualReconnect : undefined}
+        />
+      )}
       <MessageList
+        roomId={roomId}
         messages={timeline}
         viewerProfileId={viewerProfileId}
         hasMore={cursor !== null}

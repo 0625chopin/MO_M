@@ -49,7 +49,9 @@ export async function loadEarlierMessagesAction(
 
   const page = await listMessages(room.id, { beforeMessageId: input.beforeMessageId, limit: 50 });
   const items = await Promise.all(
-    page.items.map(async (message) => toMessageViewModel(message, await getProfileById(message.senderId))),
+    page.items.map(async (message) =>
+      toMessageViewModel(message, await getProfileById(message.senderId), input.crewId),
+    ),
   );
   return { items, nextCursor: page.nextCursor };
 }
