@@ -1,13 +1,12 @@
 "use client";
 
-import type { MessageViewModel } from "@/components/chat/message-view-models";
+import type { ChatTimelineItem } from "@/components/chat/message-view-models";
 import { MessageList } from "@/components/chat/MessageList";
 
 export interface ChatMessageListPreviewProps {
-  messages: MessageViewModel[];
+  messages: ChatTimelineItem[];
   viewerProfileId: string;
   hasMore?: boolean;
-  connectionError?: string;
 }
 
 /**
@@ -18,15 +17,16 @@ export interface ChatMessageListPreviewProps {
  * `sections/chat.tsx`가 이 전례를 놓치고 서버 컴포넌트에서 `onLoadMore={() => {}}`를 직접
  * 넘겼던 것을 이 래퍼로 고쳤다).
  *
- * 이 회차(020A) 데모는 실제 이어 로드를 흉내 내지 않는다 — `onLoadMore`는 이 파일 안에서만
+ * 이 데모는 실제 이어 로드·재전송을 흉내 내지 않는다 — `onLoadMore`·`onRetry`는 이 파일 안에서만
  * 만들어지고 쓰이는 no-op이라(서버→클라이언트 경계를 넘지 않는다) 클릭해도 아무 일도
- * 일어나지 않는다.
+ * 일어나지 않는다. **Task 020B에서 `connectionError` prop을 제거했다** — 그 자리는 이제
+ * `ConnectionBanner`가 맡는다(`sections/chat.tsx`의 별도 항목 참고, `MessageList` 모듈
+ * docstring과 같은 이유).
  */
 export function ChatMessageListPreview({
   messages,
   viewerProfileId,
   hasMore = false,
-  connectionError,
 }: ChatMessageListPreviewProps) {
   return (
     <MessageList
@@ -35,7 +35,7 @@ export function ChatMessageListPreview({
       hasMore={hasMore}
       isLoadingMore={false}
       onLoadMore={() => {}}
-      connectionError={connectionError}
+      onRetry={() => {}}
     />
   );
 }

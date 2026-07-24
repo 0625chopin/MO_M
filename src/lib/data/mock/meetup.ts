@@ -14,6 +14,16 @@ export async function getMeetupById(id: Id): Promise<Meetup | null> {
   return store.meetups.find((m) => m.id === id) ?? null;
 }
 
+/**
+ * 가결 Poll → Meetup 역참조(FR-060, 1:1). Task 019(투표 UI)가 `PollResult`의 "확정된 모임 보기"
+ * 링크를 리소스 ID 기준으로 만들기 위해 추가했다(R-016·FR-052와 같은 원칙 — 경로 문자열을
+ * 저장해 두지 않는다). Poll이 `closed_passed`라도 Meetup 자동 생성 파이프라인(FR-060)은 아직
+ * Task 034 몫이라 없을 수 있다 — 호출부가 `null`을 정상 상태로 다룬다.
+ */
+export async function getMeetupByPollId(pollId: Id): Promise<Meetup | null> {
+  return store.meetups.find((m) => m.pollId === pollId) ?? null;
+}
+
 export interface ListMeetupsQuery {
   crewIds: Id[];
   /** 캘린더 월간 뷰(FR-061)의 조회 구간 — 양끝 포함, ISO date 문자열 비교. */

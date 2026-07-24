@@ -1,4 +1,5 @@
 import type { ISODateString, ISODateTimeString } from "@/lib/types/common.types";
+import type { PollStatus } from "@/lib/types/poll.types";
 
 /**
  * 타임존 규칙 (NFR-025 · D-003).
@@ -88,4 +89,21 @@ export function isPollClosingBeforeMeetupDate(
   timeZone: string,
 ): boolean {
   return toZonedDateString(closesAt, timeZone) < meetupDate;
+}
+
+/**
+ * FR-043 AC4 · D-024 — "결과 집계 중" 표시 판정. 마감 시각(`closesAt`)은 지났지만 자동 종료
+ * 작업(pg_cron, Task 034)이 아직 `status`를 `open`에서 종료 상태로 바꾸지 못한 window다.
+ *
+ * D-024 부수 결정: 이 read-time fallback은 **표시만** 복구한다 — Meetup 생성(FR-060)·알림
+ * 적재(FR-045)는 이 함수를 호출한다고 해서 함께 일어나지 않는다(그 자체가 별도 판정·쓰기이며
+ * Task 034 몫). 그래서 이 함수는 boolean 하나만 반환하고 아무 것도 갱신하지 않는다 — 순수
+ * 판정, NFR-036.
+ */
+export function isPollAwaitingClosure(
+  status: PollStatus,
+  closesAt: ISODateTimeString,
+  nowIso: ISODateTimeString,
+): boolean {
+  return status === "open" && isPollExpired(closesAt, nowIso);
 }

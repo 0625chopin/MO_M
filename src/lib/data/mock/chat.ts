@@ -20,6 +20,12 @@ export async function getChatRoomByCrewId(crewId: Id): Promise<ChatRoom | null> 
 export interface ListMessagesQuery {
   /** 이 메시지보다 오래된 메시지부터 반환한다 — 위로 이어 로드(D-023). */
   beforeMessageId?: Id | null;
+  /**
+   * 이 메시지보다 최신인 메시지만 반환한다 — 재연결 시 누락분 보충 조회 전용(FR-051 E3·AC2,
+   * NFR-008 대응 구조, Task 020B). `beforeMessageId`와 동시에 쓰지 않는다(호출부가 방향을
+   * 하나만 고른다 — `resync-chat-messages.ts`).
+   */
+  afterMessageId?: Id | null;
   /** 기본 50건(FR-051 최신 50건 원칙, Task 020A). */
   limit?: number;
 }
@@ -33,6 +39,16 @@ export async function listMessages(
   const all = store.chatMessages
     .filter((m) => m.roomId === roomId && !m.deletedAt)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  if (opts.afterMessageId) {
+    // 최신순 배열에서 기준 메시지보다 앞쪽(= 더 최신)만 자른다. 기준 메시지를 못 찾으면(삭제됐거나
+    // 이미 페이지 밖으로 밀려났다) 안전하게 전체를 "놓쳤을 수 있는 메시지"로 취급한다 — 누락을
+    // 과소 반환하는 쪽보다 과다 반환(중복은 호출부가 clientKey/id로 걸러낸다)이 NFR-008 방향에
+    // 맞다. 재연결 보충 조회는 페이지네이션하지 않는다 — 끊긴 구간은 짧다고 가정한다.
+    const index = all.findIndex((m) => m.id === opts.afterMessageId);
+    const newer = index === -1 ? all : all.slice(0, index);
+    return { items: newer, nextCursor: null };
+  }
 
   const startIndex = opts.beforeMessageId
     ? all.findIndex((m) => m.id === opts.beforeMessageId) + 1

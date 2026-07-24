@@ -11,7 +11,7 @@ import type {
   Id,
 } from "@/lib/types";
 
-import { type DataResult, err, ok } from "../contracts";
+import { type CursorPage, type DataResult, err, ok } from "../contracts";
 
 import { generateId, store } from "./fixtures";
 
@@ -29,20 +29,60 @@ import { generateId, store } from "./fixtures";
 
 export interface ListCrewsQuery {
   visibility?: CrewVisibility;
-  /** 이름·설명 부분 일치(FR-014 크루 검색·탐색). */
+  /** 이름·설명 부분 일치(FR-014 크루 검색·탐색). 2자 미만 검색어를 거르는 것은 이 함수의 몫이
+   *  아니다 — 호출자(`CrewExploreContainer`·`loadMoreCrewsAction`)가 `lib/rules/
+   *  crew-search-query.ts`로 먼저 판정한다. */
   query?: string;
+  /** 카테고리 필터(FR-014, Task 016A). `lib/rules/crew-category.ts`의 값과 같은 어휘를 쓴다. */
+  category?: string;
+  /**
+   * 조회자 프로필 id. `private` 크루는 이 프로필이 **활성 멤버인 크루만** 결과에 포함한다
+   * (D-017·D-028 — "노출 판정은 화면 단위가 아니라 데이터 접근 규칙"). 비로그인 방문자는
+   * `null`(또는 생략)을 넘긴다 — 그러면 `private` 크루는 무조건 제외된다. `visibility: "private"`
+   * 를 명시적으로 요청해도 이 필터를 우회할 수 없다(아래 구현에서 두 조건을 AND로 겹친다).
+   */
+  viewerProfileId?: Id | null;
+  /** 이전 페이지 마지막 항목의 id. 없으면 첫 페이지(`listMessages`와 같은 커서 규약, D-023). */
+  cursor?: Id | null;
+  /** 기본 20건(`listPostsByPage`와 같은 페이지 크기 관례). */
+  limit?: number;
 }
 
-export async function listCrews(opts: ListCrewsQuery = {}): Promise<Crew[]> {
+/**
+ * 크루 탐색(FR-014, Task 016A) — 커서 기반 페이지네이션 + 카테고리·검색어 필터를 함께 받는다.
+ * `private` 크루 비노출(D-017)을 **이 함수 안에서** 걸러낸다 — 호출자가 반환된 배열을 다시
+ * 필터링하는 방식이면 "필터링을 깜빡한 호출부"가 생길 여지가 남는다(D-028이 명시하는
+ * "화면 필터링이 아니라 데이터 접근 규칙"의 Mock 버전).
+ */
+export async function listCrews(opts: ListCrewsQuery = {}): Promise<CursorPage<Crew>> {
   const needle = opts.query?.trim().toLowerCase();
-  return store.crews.filter((c) => {
+  const limit = opts.limit ?? 20;
+
+  const viewerActiveCrewIds = new Set(
+    opts.viewerProfileId
+      ? store.crewMemberships
+          .filter((m) => m.profileId === opts.viewerProfileId && m.status === "active")
+          .map((m) => m.crewId)
+      : [],
+  );
+
+  const all = store.crews.filter((c) => {
     if (c.status !== "active") return false;
     if (opts.visibility && c.visibility !== opts.visibility) return false;
+    if (opts.category && c.category !== opts.category) return false;
+    // D-017/D-028 — private 크루는 비소속자에게 존재 자체가 보이지 않는다(검색어·카테고리
+    // 필터와 무관하게 항상 우선 적용).
+    if (c.visibility === "private" && !viewerActiveCrewIds.has(c.id)) return false;
     if (needle && !c.name.toLowerCase().includes(needle) && !c.description.toLowerCase().includes(needle)) {
       return false;
     }
     return true;
   });
+
+  const startIndex = opts.cursor ? all.findIndex((c) => c.id === opts.cursor) + 1 : 0;
+  const page = all.slice(startIndex, startIndex + limit);
+  const nextCursor = all[startIndex + limit] ? page[page.length - 1].id : null;
+  return { items: page, nextCursor };
 }
 
 export async function getCrewById(id: Id): Promise<Crew | null> {

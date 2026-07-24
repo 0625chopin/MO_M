@@ -118,3 +118,28 @@
   `serializeCrewFilterSelection`(쉼표 join, 분기 없음)은 `normalizePaletteIndex`가
   `crew-palette.ts`에 남은 것과 같은 이유로 `calendar-types.ts`에 그대로 둔다. 판단 근거 전문은
   `crew-filter-selection.ts` 모듈 docstring에 있다.
+
+## Meetup 상세와 참석 (DESIGN, Task 022, 8일차)
+
+- **`meetup-attendance-eligibility.ts`** — `isMeetupFull`(정원 마감 여부, capacity·attendingCount
+  비교)·`isMeetupAttendanceOpen`(FR-066 사전조건 — confirmed 상태 + 예정일 미경과). 처음부터
+  이 디렉터리에 뒀다 — "정원 마감·참석 가능 여부 판정은 `lib/rules/`에 두고 컨테이너에
+  인라인하지 마라"는 이 회차 지시를 그대로 따랐다(R-015). **원자성 자체는 이 파일의 몫이
+  아니다** — 동시 요청에서 정확히 0명만 추가되는 보장(D-019)은 `lib/data/mock/meetup.ts`의
+  `respondAttendance`(조건부 UPDATE와 동등한 순차 실행) 몫이고, 이 파일은 버튼 표시를 위한
+  낙관적 판정만 한다.
+- **`meetup-attendance-button-state.ts`** — `resolveMeetupAttendanceButtonState`. Meetup
+  상세의 "참석/불참 버튼 상태 기계" — `join-request-button-state.ts`와 같은 자리다. 위
+  `isMeetupFull`·`isMeetupAttendanceOpen`을 재사용해 판정을 중복 구현하지 않는다. 크루원
+  여부는 입력에 없다 — `MeetupDetailContainer`가 이미 그 관문(FR-064 AC2, 403)을 통과시킨
+  뒤에만 이 함수를 호출한다.
+- **`meetup-participant-grouping.ts`** — `groupMeetupParticipantIds`(FR-068 참석자 3구분).
+  **판단이 갈린 지점**: "참석/불참/미응답으로 나누는 것"이 순수 포맷팅인지 판정인지 — 응답
+  기록이 없는 크루원을 "미응답"에 넣으려면 "지금 이 모임에 응답할 자격이 있는 크루원"(활성
+  크루원만, 탈퇴·강퇴자는 제외하되 이미 남긴 응답은 유지)을 먼저 정해야 한다는 점에서
+  판정으로 보고 이 디렉터리에 뒀다. `docs/CONVENTIONS.md`의 "판정이면 lib/rules, 순수
+  포맷팅·직렬화면 데이터/타입 모듈에 잔류" 기준을 이 새 사례에 처음 적용한 것이라 근거를
+  여기 남긴다 — 교차검증 대상.
+
+배럴(`index.ts`)은 여전히 만들지 않았다(위 "게시판 글쓰기" 절 참고 — 여러 팀원이 동시에 이
+디렉터리에서 작업 중이면 충돌을 피하기 위해서다).

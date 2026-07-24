@@ -144,8 +144,37 @@ export const ko = {
    * D-008·D-014·D-016)가 채웠다.
    */
   crew: {
+    /**
+     * SC-07 크루 탐색(F008, FR-014, D-007·D-017, Task 016A). 검색바·카테고리 필터·결과
+     * 그리드·무한 스크롤·빈 상태의 문구를 모은다. "가입됨" 배지(AC2)는 `home.*`가 아니라
+     * 여기 둔다 — 크루 홈의 배지가 아니라 탐색 카드 전용 문구이기 때문이다.
+     */
     explore: {
       title: "크루 검색·탐색",
+      searchLabel: "크루 검색",
+      searchPlaceholder: "크루명·소개로 검색",
+      searchSubmit: "검색",
+      categoryFilterLabel: "카테고리 필터",
+      /** ToggleGroup의 "카테고리 미선택(전체 보기)" 옵션 라벨. */
+      allCategories: "전체",
+      /** FR-014 AC2 — 이미 소속된 크루 카드에 붙는 배지. 가입 신청 버튼은 이 카드에 없다
+       *  (`CrewCard.tsx` docstring 참고 — 상태 기계는 크루 홈이 소유한다). */
+      memberBadge: "가입됨",
+      /** FR-014 AC3 — 무한 스크롤 다음 페이지를 불러오는 동안. */
+      loadingMore: "더 불러오는 중…",
+      /** FR-014 E2 — 검색어 1자일 때 제출 버튼 아래 표시. */
+      errors: {
+        queryTooShort: "검색어는 2자 이상 입력해 주세요",
+        /** 무한 스크롤 다음 페이지 조회 실패(D-030 ③, 네트워크류 도메인 오류) — 재시도 버튼과
+         *  함께 뜬다. */
+        loadMoreFailed: "더 불러오지 못했어요. 다시 시도해 주세요.",
+      },
+      /** FR-014 E1 — 결과 0건. */
+      empty: {
+        title: "검색 결과가 없어요",
+        description: "다른 검색어나 카테고리를 시도해 보세요",
+        resetLink: "전체 목록 보기",
+      },
     },
     /** SC-08 크루 개설 폼(F005). 색상은 D-016에 따라 묻지 않는다. */
     create: {
@@ -323,6 +352,9 @@ export const ko = {
          * 근거, W3C accname-1.2). 이 문구는 그 텍스트 끝에 `sr-only`로 덧붙어 "이동한다"는
          * 목적지 정보만 보탠다. */
         goToPostHint: "원 제안글로 이동",
+        /** Task 022 — Meetup 상세(SC-17)로 이어지는 별도 링크. 카드 전체 링크(원 제안글행,
+         *  `goToPostHint`)와 형제 요소로 나란히 둔다(`<a>` 중첩은 유효하지 않은 HTML). */
+        goToMeetupDetail: "모임 상세 보기",
         close: "닫기",
       },
     },
@@ -519,6 +551,13 @@ export const ko = {
     errors: {
       votingClosed: "투표가 종료되었습니다",
       alreadyVoted: "이미 투표했습니다",
+      /** FR-041 AC4 — 비대상자에게 컨트롤을 비활성화하며 함께 보여주는 사유 텍스트 2종.
+       *  "크루원이 아님"과 "크루원이지만 이 투표의 스냅샷 밖"은 서로 다른 상황이라 문구를
+       *  나눈다(전자는 D-039 크루원 게이트가 board 하위 라우트를 이미 막아 실제로는 거의
+       *  오지 않지만, Server Action 직접 호출 방어를 위해 남긴다). */
+      notEligibleNotMember: "크루원만 투표할 수 있어요",
+      notEligibleNotInSnapshot: "이 투표가 시작된 뒤 가입해 투표 대상이 아니에요",
+      submitFailed: "투표를 반영하지 못했어요. 다시 시도해 주세요",
     },
     resultReason: {
       passed: "정족수 충족 · 찬성 우세로 가결되었습니다",
@@ -526,17 +565,71 @@ export const ko = {
       rejectedMajority: "반대 우세로 부결되었습니다",
       invalidQuorum: "정족수 미달로 무효 처리되었습니다",
     },
+    /** FR-043 AC4 · D-024 — 마감 시각은 지났지만 자동 종료 처리(pg_cron, Task 034)가 아직
+     *  안 된 window의 보조 설명. `status.tallying`(제목)과 함께 쓴다. */
+    tallyingDescription: "자동 종료 처리가 진행 중이에요. 잠시 후 결과가 반영돼요",
+    /** D-003 종료 트리거② — 조기 종료(FR-043 AC3). */
+    earlyClose: {
+      trigger: "조기 종료",
+      confirmTitle: "투표를 지금 종료할까요?",
+      confirmDescription: "종료하면 되돌릴 수 없고, 지금까지의 집계로 결과가 확정돼요.",
+      confirmAction: "종료하기",
+      cancelAction: "취소",
+      pending: "종료 처리 중…",
+      alreadyClosed: "이미 종료된 투표예요",
+      forbidden: "조기 종료 권한이 없어요",
+    },
   },
 
+  /**
+   * Task 022(FR-064·066~068) — Meetup 상세(SC-17). `calendar.month.detail`(DayDetailPanel,
+   * FR-063 패널의 요약 행)과 필드가 겹치지만(크루명·시각·정원 등) 별도 네임스페이스로
+   * 유지한다 — "같은 개체라도 도메인 맥락이 다르면 공유하지 않는다"(위 §4 원칙, 이미
+   * `auth.signup`/`auth.onboarding`의 `displayName` 오류 문구가 같은 이유로 갈라져 있다).
+   * `detail.time`/`detail.place`는 FR-064 AC1 "시각·장소는 입력된 경우에만" 요구를 그대로
+   * 따라 — `calendar.month.detail.timeUnset`처럼 "미정" 플레이스홀더를 쓰지 않고, 값이
+   * 없으면 그 줄 자체를 렌더링하지 않는다(컴포넌트 쪽 책임, 문자열은 값이 있을 때만 쓰인다).
+   */
   meetup: {
     detail: {
       title: "Meetup 상세",
+      goToPost: "원 제안글 보기",
+      /** FR-060 1:1 — 가결된 투표(`PollResult`)에서 이 Meetup으로 가는 링크 CTA. Meetup 상세
+       *  화면 자체는 이 회차 DESIGN(Task 022) 몫이라 `PollResult`는 문구+링크만 만든다
+       *  (Task 019, R-016 — 경로 문자열이 아니라 리소스 ID 기준). */
+      viewConfirmed: "확정된 모임 보기",
+      pollResult: "투표 결과",
+      voteTally: "찬성 {for}표 · 반대 {against}표 · 기권 {abstain}표",
+      capacityLabel: "참석 {count} / 정원 {capacity}",
+      noCapacityLabel: "참석 {count}명 (정원 제한 없음)",
+      cancelledBadge: "취소됨",
+      participants: {
+        title: "참석자",
+        attending: "참석",
+        absent: "불참",
+        noResponse: "미응답",
+        empty: "아직 없어요",
+      },
     },
     attendance: {
       attend: "참석",
       absent: "불참",
       full: "마감되었습니다",
       recruiting: "모집 중",
+      switchToAbsent: "불참으로 변경",
+      submitPending: "처리하는 중…",
+      /** FR-066 E3 — 예정일이 지난 Meetup은 읽기 전용이다. */
+      closedNotice: "예정일이 지난 모임이라 응답을 변경할 수 없어요",
+      errors: {
+        invalidRequest: "잘못된 요청이에요",
+        sessionExpired: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+        notFound: "모임을 찾을 수 없어요",
+        notMember: "이 크루의 크루원만 응답할 수 있어요",
+        cancelled: "취소된 모임이라 응답할 수 없어요",
+        closed: "예정일이 지난 모임이라 응답할 수 없어요",
+        /** FR-066 E1·E2 — 조건부 UPDATE(D-019)가 실제로 거부한 경우. */
+        full: "정원이 차서 참석할 수 없어요",
+      },
     },
     cancelled: "취소된 모임입니다",
   },
@@ -546,11 +639,16 @@ export const ko = {
       title: "채팅방",
       /** FR-050 AC1 — 크루 개설 직후 채팅방은 이미 존재하지만 메시지가 없는 빈 상태. */
       empty: "아직 대화가 없어요. 첫 메시지를 보내보세요!",
-      /** Task 020A — 실시간 구독 자체의 실패(D-030 ③ 도메인 오류). Mock 단계에서는
-       *  `/sample` 데모 토글로만 발생하고 실제 앱 흐름에서는 나타나지 않는다(`broadcast.ts`가
-       *  아직 배럴에 조립되지 않아서다) — Task 020B의 ConnectionBanner가 이 자리를 이어받는다. */
+      /** Task 020B `ConnectionBanner`의 "disconnected" 상태(FR-051 E2, NFR-009) — 브라우저
+       *  online/offline과 `subscribeToRoom`의 `onError`(D-030 ③ 도메인 오류) 양쪽에서 쓰인다.
+       *  Task 020A 때는 이 자리가 `MessageList` 안의 인라인 배너였다(이제 방 상단 배너 하나로
+       *  합쳤다). */
       connectionErrorTitle: "실시간 연결에 문제가 발생했어요",
-      connectionErrorDescription: "새로고침하면 놓친 메시지를 다시 불러올 수 있어요.",
+      /** 재연결되면 `resyncChatMessagesAction`(FR-051 E3)이 자동으로 누락분을 이어받으므로,
+       *  "새로고침하라"던 이전 문구(Task 020A) 대신 자동 복구를 안내한다. */
+      connectionErrorDescription: "연결이 복구되면 놓친 메시지를 자동으로 이어받아요. 계속되면 새로고침해 주세요.",
+      /** `ConnectionBanner`의 "reconnecting" 상태. */
+      reconnecting: "다시 연결하는 중…",
       loadingEarlier: "이전 메시지를 불러오는 중…",
     },
     postCard: {
@@ -564,12 +662,28 @@ export const ko = {
       deleted: "삭제된 메시지입니다",
       send: "전송",
       inputPlaceholder: "메시지를 입력하세요",
+      /** Task 020B — 낙관적 렌더(FR-051 정상 흐름 ③) 말풍선의 스크린 리더 전용 문구. 시각적으로는
+       *  스피너 하나뿐이라(색·타임스탬프 자리만 바뀐다) 보조기술 사용자에게는 이 문구가 유일한
+       *  신호다(NFR-021). */
+      sending: "전송 중…",
+      /** Task 020B — 실패한 말풍선의 재전송 버튼(FR-051 E1 "실패 표시 + 재전송 버튼"). 폼 상단
+       *  경고(`errors.sendFailed`)와 별도 문구를 쓴다 — 이건 메시지 하나에 붙는 인라인 라벨이지
+       *  경고 배너가 아니다. */
+      resend: "재전송",
+      /** Task 020B — 실패한 말풍선 옆 인라인 문구. `errors.sendFailed`(폼 상단 경고, 전송 전
+       *  클라이언트 검증 실패용)와 다르다 — 이건 낙관적으로 이미 그려진 말풍선이 실패로
+       *  바뀔 때 그 자리에 붙는다. */
+      sendFailedInline: "전송하지 못했어요",
       errors: {
         /** FR-051 E4. */
         tooLong: "메시지는 {max}자 이내로 입력해 주세요",
         empty: "보낼 메시지를 입력해 주세요",
         /** FR-051 E1. 권한 거부·방 불일치 등 서버측 실패도 이 문구로 뭉뚱그린다 — 로그인
-         *  실패(genericError)와 같은 이유로 어느 지점이 막혔는지 굳이 구분해 알려주지 않는다. */
+         *  실패(genericError)와 같은 이유로 어느 지점이 막혔는지 굳이 구분해 알려주지 않는다.
+         *  Task 020B부터는 이 값이 폼 상단이 아니라 `sendFailedInline`을 통해 말풍선 옆에
+         *  간접적으로만 쓰인다(서버가 이 문자열 자체를 반환하지만 컨테이너는 성공/실패
+         *  여부만 보고 `sendFailedInline`으로 통일해 보여준다) — 그래도 서버 쪽 로그·향후
+         *  다른 호출부를 위해 값은 유지한다. */
         sendFailed: "메시지를 보내지 못했어요. 다시 시도해 주세요",
       },
     },
