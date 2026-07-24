@@ -1,0 +1,83 @@
+/**
+ * Schedule-X(@schedule-x/theme-default) → mo_im 디자인 토큰 브리지.
+ *
+ * Schedule-X는 색을 전부 `--sx-*` CSS 변수로 노출한다. 그 변수를 앱의 시맨틱 토큰
+ * (`globals.css`)에 매핑하면 **따뜻한 종이·잉크 팔레트와 다크모드가 자동으로 따라온다** —
+ * 앱 토큰 자체가 `.dark`에서 뒤집히므로 캘린더 색도 함께 뒤집힌다. 그래서 Schedule-X의 `isDark`
+ * 를 쓰지 않는다(라이트 구조 유지 + 변수만 앱 토큰으로 덮음).
+ *
+ * 셀렉터를 `.mo-im-sx .sx__calendar`로 둔 이유: 테마 기본값이 `.sx__calendar`(명시도 0,1,0)에
+ * 정의돼 있어, 래퍼 클래스를 앞에 붙여 명시도(0,2,0)를 한 단계 높여야 소스 순서와 무관하게
+ * 항상 이긴다. 크루 12색(`--crew-*`)은 이벤트 칩의 인라인 스타일로만 들어가므로 여기서 건드리지
+ * 않는다(채도=데이터 원칙 그대로).
+ */
+
+.mo-im-sx .sx__calendar {
+  /* 표면·배경 — 배경은 앱 배경, 캘린더 면은 카드(흰 종이/다크 카드). */
+  --sx-color-background: var(--background);
+  --sx-color-surface: var(--card);
+  --sx-color-surface-dim: var(--muted);
+  --sx-color-surface-bright: var(--card);
+  --sx-color-surface-container: var(--secondary);
+  --sx-color-surface-container-low: var(--card);
+  --sx-color-surface-container-high: var(--muted);
+  --sx-color-on-background: var(--foreground);
+  --sx-color-on-surface: var(--foreground);
+
+  /* 강조(오늘·선택·헤더 버튼) — 잉크 프라이머리. */
+  --sx-color-primary: var(--primary);
+  --sx-color-on-primary: var(--primary-foreground);
+  --sx-color-primary-container: var(--accent);
+  --sx-color-on-primary-container: var(--accent-foreground);
+  --sx-color-secondary: var(--secondary);
+  --sx-color-on-secondary: var(--secondary-foreground);
+  --sx-color-secondary-container: var(--secondary);
+  --sx-color-on-secondary-container: var(--secondary-foreground);
+  --sx-color-tertiary: var(--muted-foreground);
+  --sx-color-on-tertiary: var(--card);
+  --sx-color-tertiary-container: var(--muted);
+  --sx-color-on-tertiary-container: var(--foreground);
+  --sx-color-surface-tint: var(--primary);
+
+  /* 경계·중립. */
+  --sx-color-outline: var(--border);
+  --sx-color-outline-variant: var(--border);
+  --sx-color-neutral: var(--muted-foreground);
+  --sx-internal-color-text: var(--foreground);
+  --sx-internal-color-light-gray: var(--muted);
+  --sx-internal-color-gray-ripple-background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  --sx-color-shadow: oklch(0.2 0.02 70);
+
+  /* 모서리 — 앱 반경 스케일에 맞춘다. */
+  --sx-rounding-extra-small: var(--radius-sm);
+  --sx-rounding-small: var(--radius-md);
+  --sx-rounding-large: var(--radius-lg);
+  --sx-rounding-extra-large: var(--radius-xl);
+
+  /* 온색 그림자(순수 검정 대신 잉크 색조). */
+  --sx-box-shadow-level3:
+    0 1px 2px oklch(0.2 0.02 70 / 0.05),
+    0 10px 30px -14px oklch(0.2 0.03 70 / 0.16);
+}
+
+/* 래퍼 크기 — 월간 격자는 컨테이너 높이를 채운다. 뷰포트에 따라 높이를 조절해 360px에서도
+   가로 스크롤 없이 들어오게 한다(NFR-026). 폭은 부모(카드/콘텐츠)를 100% 채운다. */
+.mo-im-sx .sx-react-calendar-wrapper {
+  width: 100%;
+  height: clamp(30rem, 74vh, 47rem);
+}
+
+/* 커스텀 `monthGridEvent`가 칩 내용을 전부 그리므로, Schedule-X 기본 이벤트 껍데기의 배경·
+   패딩을 지워 우리 칩만 보이게 한다(기본 배경이 남으면 크루색 칩 둘레에 회색 테가 생긴다). */
+.mo-im-sx .sx__month-grid-event,
+.mo-im-sx .sx__month-agenda-event {
+  background-color: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+/* 헤더(월 이동·오늘 버튼·날짜 선택기)와 그리드 텍스트가 앱 서체(Noto Sans KR)를 쓰도록.
+   theme-default가 `font-family: inherit`이라 래퍼에서 한 번 지정하면 전부 따라온다. */
+.mo-im-sx .sx__calendar {
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+}
