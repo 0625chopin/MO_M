@@ -103,5 +103,5 @@ CREW가 I-044(라우트 레벨 권한 거부가 HTTP 500) 후속으로 `node_mod
 
 ## git
 - 브랜치: `day-8` (`day-7`에서 분기)
-- 커밋: (아래 완료 처리에서 기록)
-- 푸시: (사용자 승인 후 기록)
+- 커밋 `3ffcbc8` — `Day 8: Phase 3 화면 4종 — 투표 UI·Meetup 상세·크루 탐색·채팅 낙관적 렌더 (Task 019·022·016A·020B)` (70개 파일, +4,208줄 / -253줄)
+- 푸시: `origin/day-8` 성공 (2026-07-24). PR 생성 링크: https://github.com/0625chopin/MO_M/pull/new/day-8
