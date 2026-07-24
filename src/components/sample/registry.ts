@@ -1,3 +1,7 @@
+import { accountSection } from "@/components/sample/sections/account";
+import { authSection } from "@/components/sample/sections/auth";
+import { boardSection } from "@/components/sample/sections/board";
+import { calendarSection } from "@/components/sample/sections/calendar";
 import { certaintySection } from "@/components/sample/sections/certainty";
 import { errorsSection } from "@/components/sample/sections/errors";
 import { formsSection } from "@/components/sample/sections/forms";
@@ -27,4 +31,8 @@ export const SHOWCASE_SECTIONS: ShowcaseSection[] = [
   formsSection,
   overlaysSection,
   errorsSection,
+  calendarSection,
+  authSection,
+  boardSection,
+  accountSection,
 ];

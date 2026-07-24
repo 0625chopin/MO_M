@@ -38,6 +38,45 @@ export async function getPostById(id: Id): Promise<Post | null> {
   return post && !post.deletedAt ? post : null;
 }
 
+export interface ListPostsPageQuery {
+  type?: PostType;
+  /** 1부터 시작. */
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PostsPage {
+  items: Post[];
+  page: number;
+  pageSize: number;
+  /** 삭제되지 않은 전체 게시글 수 — FR-031 AC2 "총 건수" 표시 근거. */
+  totalCount: number;
+  totalPages: number;
+}
+
+/**
+ * 게시글 목록(FR-031), 20건 페이지네이션 + 총 건수 표시(AC2)를 위한 번호 기반 조회.
+ * `listPosts`(커서 기반, 위)와 나란히 둔다 — 커서 기반은 무한 스크롤류 소비자를 위해 남겨 두고,
+ * 번호 페이지 UI(총 건수·페이지 이동)가 필요한 게시판 목록은 이 함수를 쓴다. 둘 다 같은 필터
+ * (crewId 소속 board·삭제 제외·유형)를 적용하되 페이지네이션 방식만 다르다.
+ */
+export async function listPostsByPage(
+  boardId: Id,
+  opts: ListPostsPageQuery = {},
+): Promise<PostsPage> {
+  const pageSize = opts.pageSize ?? 20;
+  const page = Math.max(1, opts.page ?? 1);
+  const all = store.posts
+    .filter((p) => p.boardId === boardId && !p.deletedAt && (!opts.type || p.type === opts.type))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  const totalCount = all.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const start = (page - 1) * pageSize;
+  const items = all.slice(start, start + pageSize);
+  return { items, page, pageSize, totalCount, totalPages };
+}
+
 export interface CreatePostInput {
   boardId: Id;
   authorId: Id;

@@ -42,6 +42,9 @@ export function generateProfiles(
       status,
       searchOptOut: !isWithdrawn && chance(rng, 0.08),
       anonymizedAt: isWithdrawn ? "2026-06-01T00:00:00.000Z" : null,
+      // FR-004 AC1(30일 쿨다운, Task 015B)의 근거 필드. 대량 시드는 "핸들을 바꾼 적 없는"
+      // 기본 상태만 표현한다 — 쿨다운 잠김 상태는 /sample 정적 데모로 별도 시연한다.
+      handleChangedAt: null,
     });
   }
   return profiles;

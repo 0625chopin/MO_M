@@ -55,6 +55,7 @@ function createSeed() {
       status: "active",
       searchOptOut: false,
       anonymizedAt: null,
+      handleChangedAt: null,
     },
     {
       id: "profile-2",
@@ -65,6 +66,7 @@ function createSeed() {
       status: "active",
       searchOptOut: false,
       anonymizedAt: null,
+      handleChangedAt: null,
     },
     {
       id: "profile-3",
@@ -75,6 +77,7 @@ function createSeed() {
       status: "active",
       searchOptOut: false,
       anonymizedAt: null,
+      handleChangedAt: null,
     },
   ];
 

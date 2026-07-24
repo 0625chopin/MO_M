@@ -104,6 +104,21 @@ export async function listCrewMembers(crewId: Id): Promise<CrewMembership[]> {
   return store.crewMemberships.filter((m) => m.crewId === crewId);
 }
 
+/**
+ * 프로필이 속한 크루 목록(FR-061 "사용자가 속한 모든 크루" 조회 — 통합 캘린더 Task 021A).
+ * `listCrewMembers`(크루 → 멤버)의 반대 방향이다. 활성 멤버십(`status === "active"`)만
+ * 포함한다 — 탈퇴·강퇴된 크루의 Meetup은 캘린더에 뜨지 않아야 한다. 크루 필터 UI(FR-061
+ * AC5, D-014·R-017)는 Task 021B 몫이라 이 함수는 필터링 없이 전량을 반환한다.
+ */
+export async function listCrewsByProfile(profileId: Id): Promise<Crew[]> {
+  const crewIds = new Set(
+    store.crewMemberships
+      .filter((m) => m.profileId === profileId && m.status === "active")
+      .map((m) => m.crewId),
+  );
+  return store.crews.filter((c) => crewIds.has(c.id) && c.status === "active");
+}
+
 export async function getCrewMembership(
   crewId: Id,
   profileId: Id,
