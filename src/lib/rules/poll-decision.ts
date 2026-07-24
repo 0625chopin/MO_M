@@ -1,4 +1,9 @@
-import type { PollDecisionInput, PollDecisionResult, PollOutcome } from "@/lib/types/poll.types";
+import type {
+  PollDecisionInput,
+  PollDecisionResult,
+  PollOutcome,
+  PollTally,
+} from "@/lib/types/poll.types";
 
 /**
  * 투표 최종 판정 (D-003).
@@ -22,7 +27,7 @@ export function decidePollOutcome(input: PollDecisionInput): PollDecisionResult 
   let outcome: PollOutcome;
   if (!quorum.met) {
     outcome = "invalid"; // FR-044 AC3
-  } else if (tally.forCount === tally.againstCount) {
+  } else if (isPollTie(tally)) {
     outcome = "rejected"; // D-003 동수 처리
   } else if (tally.forCount > tally.againstCount) {
     outcome = "passed"; // FR-044 AC1
@@ -31,4 +36,19 @@ export function decidePollOutcome(input: PollDecisionInput): PollDecisionResult 
   }
 
   return { outcome, quorum, tally };
+}
+
+/**
+ * 찬반 동수 여부(D-003 "동수 처리: 부결"). 위 `decidePollOutcome`이 내부적으로 쓰고,
+ * `PollResult`(Task 019, `components/poll/PollResult.tsx`)도 부결 사유 문구(동수 vs 반대
+ * 우세)를 고르는 데 이 함수를 그대로 호출한다 — 최종 판정(`outcome`)은 이미
+ * `decidePollOutcome`이 확정해 넘기므로 `PollResult`가 이 함수로 다시 "부결인지"를 판정하는
+ * 것은 아니다(그건 `outcome === "rejected"`로 이미 안다). 다만 "그 부결이 동수였는지"는
+ * `outcome`이 담지 않는 정보라 표시 문구를 고르려면 같은 비교가 한 번 더 필요한데, 그 비교식
+ * 자체를 이 파일 밖에 다시 적으면(예: `tally.forCount === tally.againstCount`를 컴포넌트에
+ * 인라인) 이 식이 바뀔 때 두 곳이 조용히 갈리는 R-015 위험이 생긴다 — 그래서 비교식 자체를
+ * 이 함수 하나로 뽑아 저장소 전체에서 단 한 곳만 갖게 했다(8일차 CREW 교차검증 지적, minor).
+ */
+export function isPollTie(tally: PollTally): boolean {
+  return tally.forCount === tally.againstCount;
 }

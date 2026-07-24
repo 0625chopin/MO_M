@@ -26,6 +26,55 @@ export interface MessageViewModel {
 export const MESSAGE_PAGE_SIZE = 50;
 
 /**
+ * 메시지 하나의 전송 상태(Task 020B, FR-051 정상 흐름 ③④·E1). 서버가 확정한 메시지는
+ * 항상 `"sent"`다 — `MessageRoomContainer`가 `messages` 배열을 화면용으로 매핑할 때 부여한다.
+ * `"pending"`·`"failed"`는 아직 서버 확인을 받지 못한 로컬 전용(낙관적) 항목에만 쓰인다.
+ */
+export type MessageDeliveryStatus = "sent" | "pending" | "failed";
+
+/**
+ * `MessageList`·`MessageBubble`이 실제로 받는 타임라인 항목 — `MessageViewModel`에
+ * `deliveryStatus`만 얹는다. 서버 확정 메시지·로컬 낙관적 메시지를 같은 배열에 섞어 렌더하기
+ * 위한 통합 모양이다(Task 020B).
+ */
+export interface ChatTimelineItem extends MessageViewModel {
+  deliveryStatus: MessageDeliveryStatus;
+}
+
+export interface OptimisticMessageInput {
+  clientKey: string;
+  roomId: Id;
+  senderId: Id;
+  body: string;
+  createdAt: ISODateTimeString;
+}
+
+/**
+ * 낙관적 렌더(FR-051 정상 흐름 ③)용 임시 타임라인 항목을 만든다. 서버 확정 전이라 진짜 `id`가
+ * 없으므로 `clientKey`를 그대로 `id`로 쓴다 — 재전송해도 같은 `clientKey`를 재사용하므로
+ * `MessageList`의 React `key`가 안정적으로 유지된다(재전송 중 말풍선이 다시 마운트되지 않는다).
+ * 본인 메시지에서만 만들어지고(`MessageBubble`은 `isOwn`일 때 발신자 이름·아바타를 그리지
+ * 않는다) `senderDisplayName`·`senderAvatarUrl`은 화면에 실제로 나타나지 않는 자리표시자다.
+ * `type`은 텍스트로 고정한다 — 게시글 공유 카드(FR-052)의 낙관적 렌더는 Task 020C 범위다.
+ */
+export function createOptimisticTimelineItem(input: OptimisticMessageInput): ChatTimelineItem {
+  return {
+    id: input.clientKey,
+    roomId: input.roomId,
+    senderId: input.senderId,
+    senderDisplayName: "",
+    senderAvatarUrl: null,
+    type: "text",
+    body: input.body,
+    refPostId: null,
+    clientKey: input.clientKey,
+    createdAt: input.createdAt,
+    deletedAt: null,
+    deliveryStatus: "pending",
+  };
+}
+
+/**
  * `MessageListContainer`(초기 조회)·`send-chat-message.ts`·`load-earlier-messages.ts`(Server
  * Action) 세 곳이 공유하는 조인 로직. 한 곳에서만 바뀌면 되도록 여기 모아 둔다.
  */

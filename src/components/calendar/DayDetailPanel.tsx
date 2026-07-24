@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { CalendarMeetupDetail } from "@/components/calendar/calendar-types";
 import { CrewLegend } from "@/components/calendar/CrewLegend";
 import { formatStartTimeKo } from "@/components/calendar/date-grid";
+import { getMeetupDetailHref } from "@/components/meetup/meetup-links";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,6 +57,12 @@ const DESKTOP_MEDIA_QUERY = "(min-width: 768px)";
  * 표). 이 패널은 `DrawerTrigger`를 쓰지 않고 `open`을 외부(`MonthCalendar`의 날짜 셀)에서
  * 제어하므로, 닫힐 때 포커스는 "이전에 포커스가 있던 요소"(그 날짜 셀)로 돌아간다 — 실제
  * 브라우저 확인은 팀장 회차 말미 렌더 체크 항목으로 남겨 둔다(보고 참고).
+ *
+ * **Meetup 상세(SC-17)로 이어지는 경로(Task 022, 8일차)**: 각 행의 카드 전체는 여전히
+ * FR-063 AC2대로 "원 제안글"로 이동한다 — 이 동작은 요구사항 고정값이라 바꾸지 않았다. 대신
+ * 카드 아래에 `meetupId` 기준(R-016/FR-052, `meetup-links.ts`의 `getMeetupDetailHref`) 링크를
+ * **형제 요소로** 추가했다 — 카드 링크 안에 중첩하면 `<a>` 안에 `<a>`가 되어 유효하지 않은
+ * HTML이 된다.
  */
 export interface DayDetailPanelProps {
   open: boolean;
@@ -155,11 +162,10 @@ function DayDetailMeetupRow({ meetup }: { meetup: CalendarMeetupDetail }) {
     </div>
   );
 
-  // FR-063 AC2 — 원 제안글로 이동. `postHref`가 없으면(방어적 경우, 정상 경로에서는 항상 값이
-  // 있다) 그냥 목록 카드로만 보여준다 — 갈 곳 없는 링크를 만들지 않는다.
-  if (!meetup.postHref) return card;
-
-  return (
+  // FR-063 AC2 — 항목(카드) 자체를 클릭하면 원 제안글로 이동한다. `postHref`가 없으면
+  // (방어적 경우, 정상 경로에서는 항상 값이 있다) 그냥 목록 카드로만 보여준다 — 갈 곳 없는
+  // 링크를 만들지 않는다.
+  const cardWithPostLink = meetup.postHref ? (
     <Link
       href={meetup.postHref}
       className="block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -167,5 +173,22 @@ function DayDetailMeetupRow({ meetup }: { meetup: CalendarMeetupDetail }) {
       {card}
       <span className="sr-only">{strings.calendar.month.detail.goToPostHint}</span>
     </Link>
+  ) : (
+    card
+  );
+
+  return (
+    <div className="flex flex-col gap-1">
+      {cardWithPostLink}
+      {/* Meetup 상세(SC-17, FR-064)로 이어지는 별도 경로 — 카드 전체를 감싼 위 Link(원
+       *  제안글행)와 나란한 형제 요소로 둔다(<a> 중첩은 유효하지 않은 HTML이다). 리소스 ID
+       *  (meetupId) 기준 경로다(R-016/FR-052, `meetup-links.ts`). */}
+      <Link
+        href={getMeetupDetailHref(meetup.id)}
+        className="self-end text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+      >
+        {strings.calendar.month.detail.goToMeetupDetail}
+      </Link>
+    </div>
   );
 }

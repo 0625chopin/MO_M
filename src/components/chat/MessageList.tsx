@@ -3,24 +3,23 @@
 import { Loader2Icon, MessageCircleIcon } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
-import type { MessageViewModel } from "@/components/chat/message-view-models";
+import type { ChatTimelineItem } from "@/components/chat/message-view-models";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
-import { ErrorState } from "@/components/ui/error-state";
 import { strings } from "@/lib/strings";
 import type { Id } from "@/lib/types";
 
 export interface MessageListProps {
-  /** 오래된 → 최신 순(화면에 보이는 순서 그대로). 컨테이너가 정렬을 마쳐 내려준다. */
-  messages: MessageViewModel[];
+  /** 오래된 → 최신 순(화면에 보이는 순서 그대로). 서버 확정 메시지 뒤에 로컬 낙관적(pending·
+   *  failed) 메시지가 이어 붙는다 — 컨테이너가 이미 이 순서로 합쳐 내려준다(Task 020B). */
+  messages: ChatTimelineItem[];
   viewerProfileId: Id;
   /** `nextCursor !== null` — 더 오래된 메시지가 남아 있는지(FR-051 AC3). */
   hasMore: boolean;
   isLoadingMore: boolean;
   onLoadMore: () => void;
-  /** 구독 자체의 실패(D-030 ③ 도메인 오류) — `RealtimeConnectionError.message`가 아니라
-   *  컨테이너가 이미 사용자용 문구로 바꿔 내려준 값. */
-  connectionError?: string | null;
+  /** 실패한 메시지의 재전송(FR-051 E1) — `clientKey`로 대상을 지목한다. */
+  onRetry?: (clientKey: string) => void;
 }
 
 /**
@@ -38,6 +37,11 @@ export interface MessageListProps {
  * 두어 화면이 아래로 튄다 — `useLayoutEffect`에서 이전 `scrollHeight`와의 차이만큼 보정해
  * 사용자가 보던 위치를 유지한다. 새 메시지가 실시간으로 도착했을 때는 사용자가 하단 근처에
  * 있을 때만 따라 내려간다(과거 메시지를 읽는 중에 강제로 끌어내리지 않는다).
+ *
+ * **Task 020B에서 `connectionError` prop을 제거했다**: 구독 실패(D-030 ③ 도메인 오류)를 이
+ * 목록 안에 인라인 배너로 보여주던 것을, `MessageRoomContainer`가 소유하는 연결 상태 기계
+ * (`lib/rules/chat-connection-state.ts`)와 `ConnectionBanner`로 옮겼다 — 브라우저 온/오프라인과
+ * 구독 오류를 같은 상태로 합쳐 방 상단 한 곳에서만 보여주기 위해서다(NFR-009, 중복 표시 방지).
  */
 export function MessageList({
   messages,
@@ -45,7 +49,7 @@ export function MessageList({
   hasMore,
   isLoadingMore,
   onLoadMore,
-  connectionError,
+  onRetry,
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -122,12 +126,15 @@ export function MessageList({
             )}
           </div>
         )}
-        {connectionError && (
-          <ErrorState title={strings.chat.room.connectionErrorTitle} description={connectionError} />
-        )}
-        {/* 안정적인 key(NFR-003·007, D-029) — 메시지 id는 재전송돼도 바뀌지 않는다. */}
+        {/* 안정적인 key(NFR-003·007, D-029) — 메시지 id(낙관적 항목은 clientKey)는 재전송돼도
+            바뀌지 않는다. */}
         {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} isOwn={message.senderId === viewerProfileId} />
+          <MessageBubble
+            key={message.id}
+            message={message}
+            isOwn={message.senderId === viewerProfileId}
+            onRetry={onRetry ? () => onRetry(message.clientKey) : undefined}
+          />
         ))}
       </div>
     </div>

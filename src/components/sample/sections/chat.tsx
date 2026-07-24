@@ -1,42 +1,56 @@
-import { AlertTriangleIcon, Loader2Icon, SendIcon } from "lucide-react";
+import { AlertTriangleIcon, SendIcon } from "lucide-react";
 
-import type { MessageViewModel } from "@/components/chat/message-view-models";
-import { MessageBubble } from "@/components/chat/MessageBubble";
+import type { ChatTimelineItem } from "@/components/chat/message-view-models";
 import { MessageListSkeleton } from "@/components/chat/MessageListSkeleton";
 import type { RouteErrorKind } from "@/components/errors/route-error-kind";
 import { RouteErrorBoundaryPreview } from "@/components/errors/RouteErrorBoundaryPreview";
 import { PreviewFrame } from "@/components/sample/PreviewFrame";
 import { ChatMessageListPreview } from "@/components/sample/sections/ChatMessageListPreview";
+import { ConnectionBannerPreview } from "@/components/sample/sections/ConnectionBannerPreview";
+import { MessageBubblePreview } from "@/components/sample/sections/MessageBubblePreview";
 import { defineSection } from "@/components/sample/showcase-types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { strings } from "@/lib/strings";
+import { CHAT_MESSAGE_MAX_LENGTH } from "@/lib/rules/chat-message-validation";
+import { strings, t } from "@/lib/strings";
 
 /**
- * Task 020A — 채팅 MessageList/Bubble/Composer(FR-050·051). `MessageList`·`MessageBubble`은
+ * 채팅 MessageList/Bubble/Composer(FR-050·051, Task 020A) + 낙관적 렌더·재전송·ConnectionBanner
+ * (FR-051 정상 흐름 ③④·E1·E2, Task 020B). `MessageList`·`MessageBubble`·`ConnectionBanner`는
  * 순수 표현 컴포넌트라 `lib/data`를 참조하지 않으므로 실제 컴포넌트를 그대로 렌더링한다(아래
  * 고정 데이터는 `MessageListContainer`가 만드는 조인 결과 모양을 손으로 채운 것이다, `board.tsx`
- * 와 같은 패턴). **`MessageList`는 `ChatMessageListPreview`(`/sample` 전용 클라이언트 래퍼)를
- * 거쳐 렌더한다** — `onLoadMore`가 필수 함수 prop인데 이 파일(서버 컴포넌트)은 클로저를 직접
- * 넘길 수 없다(RSC는 함수를 직렬화하지 않는다, `BoardErrorStatePreview.tsx`와 같은 이유—
- * DESIGN 020A 교차검증 BLOCKER 2로 드러나 고쳤다).
+ * 와 같은 패턴). **`MessageList`는 `ChatMessageListPreview`, `ConnectionBanner`는
+ * `ConnectionBannerPreview`, `MessageBubble`은 `MessageBubblePreview`(모두 `/sample` 전용
+ * 클라이언트 래퍼)를 거쳐 렌더한다** — `onLoadMore`·`onRetry`가 필수/선택 함수 prop인데 이
+ * 파일(서버 컴포넌트)은 클로저를 직접 넘길 수 없다(RSC는 함수를 직렬화하지 않는다,
+ * `BoardErrorStatePreview.tsx`와 같은 이유 — DESIGN 020A 교차검증 BLOCKER 2로 드러나 고쳤다).
+ * **`MessageBubblePreview`는 8일차 DESIGN Task 022 교차검증에서 새로 드러난 BLOCKER**였다 —
+ * 말풍선 자체는 함수 prop이 없어(`isOwn`·`message`만 받는다) 이 파일이 이전에는 그대로
+ * 렌더링해도 문제가 없었지만, "전송 실패" 변형이 `onRetry`를 받으면서 같은 위반이 됐다. 다음에
+ * `MessageBubble`처럼 함수 prop이 없던 컴포넌트에 함수 prop이 새로 생기면 이 파일에서 그 항목만
+ * 놓치기 쉬우니 등록을 바꿀 때마다 이 문단을 함께 확인한다.
  *
- * **`Composer`만 예외** — 실제 `sendChatMessageAction` Server Action을 `useTransition`으로
- * 직접 호출해(`auth.tsx`의 `SignupForm` 등과 같은 이유, 실제 부작용이 있는 폼이라 그대로
- * 렌더링하지 않는다) 여기서 그대로 렌더링하면 쇼케이스를 둘러보다 실수로 제출해 공용 Mock
- * 스토어의 `room-1`에 실제 메시지가 쌓인다. 그래서 `Composer`는 같은 UI 원자·같은 문구를 쓰는
- * 정적 프리뷰만 둔다.
+ * **`Composer`만 예외** — 실제 앱에서는 `MessageRoomContainer.submitMessage`(Server Action 호출)
+ * 로 이어지는 `onSubmit`을 받는데(`auth.tsx`의 `SignupForm` 등과 같은 이유, 실제 부작용이 있는
+ * 흐름이라 그대로 렌더링하지 않는다) 여기서 그대로 렌더링하면 쇼케이스를 둘러보다 실수로
+ * 제출해 공용 Mock 스토어의 `room-1`에 실제 메시지가 쌓인다. 그래서 `Composer`는 같은 UI
+ * 원자·같은 문구를 쓰는 정적 프리뷰만 둔다.
  *
- * "오류"는 두 층으로 나눠 등록한다(D-030 ③): **방 접근 자체의 거부**(`chat:send_message` 판정
+ * **`ConnectionBanner`는 `/sample` 전용 prop을 쓰지 않는다** — `status`가 실제 프로덕션
+ * 컨테이너(`MessageRoomContainer`)도 그대로 넘기는 값이라, `/sample`도 다른 리터럴을 넣기만
+ * 하면 3상태를 보여줄 수 있다(`DayDetailPanel`류의 escape hatch와 다른 이유는
+ * `ConnectionBanner.tsx` 모듈 docstring 참고 — 020B 팀장 특별 지시에 대한 판단).
+ *
+ * "오류"는 세 층으로 나눠 등록한다(D-030 ③): **방 접근 자체의 거부**(`chat:send_message` 판정
  * 실패 — `MessageListContainer`가 던지고 `error.tsx`가 받는다, 게시판의 `board:read` 거부와
- * 같은 패턴) · **구독 중 발생하는 도메인 오류**(`MessageList`의 `connectionError` prop — 실시간
- * 연결이 끊긴 상태에서도 이미 불러온 메시지는 계속 보여준다).
+ * 같은 패턴) · **연결 상태**(`ConnectionBanner`의 "disconnected" — 브라우저 오프라인 또는 구독
+ * 자체의 실패) · **메시지별 전송 실패**(`MessageBubble`의 "failed" 말풍선 — 재전송 버튼 포함).
  */
 
 const VIEWER_PROFILE_ID = "profile-1";
 
-const SAMPLE_MESSAGES: MessageViewModel[] = [
+const SAMPLE_MESSAGES: ChatTimelineItem[] = [
   {
     id: "sample-message-1",
     roomId: "room-1",
@@ -49,6 +63,7 @@ const SAMPLE_MESSAGES: MessageViewModel[] = [
     clientKey: "sample-message-1",
     createdAt: "2026-07-20T09:05:00.000Z",
     deletedAt: null,
+    deliveryStatus: "sent",
   },
   {
     id: "sample-message-2",
@@ -62,6 +77,7 @@ const SAMPLE_MESSAGES: MessageViewModel[] = [
     clientKey: "sample-message-2",
     createdAt: "2026-07-20T09:07:00.000Z",
     deletedAt: null,
+    deliveryStatus: "sent",
   },
   {
     id: "sample-message-3",
@@ -75,6 +91,7 @@ const SAMPLE_MESSAGES: MessageViewModel[] = [
     clientKey: "sample-message-3",
     createdAt: "2026-07-22T10:01:00.000Z",
     deletedAt: null,
+    deliveryStatus: "sent",
   },
   {
     id: "sample-message-4",
@@ -88,8 +105,42 @@ const SAMPLE_MESSAGES: MessageViewModel[] = [
     clientKey: "sample-message-4",
     createdAt: "2026-07-22T10:03:00.000Z",
     deletedAt: "2026-07-22T10:04:00.000Z",
+    deliveryStatus: "sent",
   },
 ];
+
+/** Task 020B — 낙관적 렌더(FR-051 정상 흐름 ③) 데모용. `createOptimisticTimelineItem`이 만드는
+ *  실제 모양을 손으로 채운 것 — `senderDisplayName`은 본인 메시지라 화면에 나타나지 않는다. */
+const SAMPLE_PENDING_MESSAGE: ChatTimelineItem = {
+  id: "sample-pending-clientkey",
+  roomId: "room-1",
+  senderId: VIEWER_PROFILE_ID,
+  senderDisplayName: "",
+  senderAvatarUrl: null,
+  type: "text",
+  body: "지금 전송 중인 메시지예요",
+  refPostId: null,
+  clientKey: "sample-pending-clientkey",
+  createdAt: "2026-07-22T10:05:00.000Z",
+  deletedAt: null,
+  deliveryStatus: "pending",
+};
+
+/** Task 020B — 재전송(FR-051 E1) 데모용. */
+const SAMPLE_FAILED_MESSAGE: ChatTimelineItem = {
+  id: "sample-failed-clientkey",
+  roomId: "room-1",
+  senderId: VIEWER_PROFILE_ID,
+  senderDisplayName: "",
+  senderAvatarUrl: null,
+  type: "text",
+  body: "네트워크가 끊겨서 보내지 못한 메시지예요",
+  refPostId: null,
+  clientKey: "sample-failed-clientkey",
+  createdAt: "2026-07-22T10:06:00.000Z",
+  deletedAt: null,
+  deliveryStatus: "failed",
+};
 
 const DOMAIN_ERROR_ITEMS: Array<{ kind: RouteErrorKind; name: string; note: string }> = [
   {
@@ -102,13 +153,13 @@ const DOMAIN_ERROR_ITEMS: Array<{ kind: RouteErrorKind; name: string; note: stri
 export const chatSection = defineSection({
   id: "chat",
   label: "채팅",
-  title: "채팅 — MessageList · MessageBubble · Composer",
+  title: "채팅 — MessageList · MessageBubble · Composer · ConnectionBanner",
   description:
-    "FR-050·051. 최신 50건 + 위로 이어 로드(윈도잉, D-023)와 lib/realtime 구독(Task 008)을 소비하는 첫 화면입니다. 낙관적 렌더·재전송·ConnectionBanner는 Task 020B, 게시글 공유 카드(PostLinkCard)는 Task 020C 몫이라 여기서는 자리표시자만 보여줍니다.",
+    "FR-050·051. 최신 50건 + 위로 이어 로드(윈도잉, D-023)와 lib/realtime 구독(Task 008)을 소비하는 첫 화면이자, 낙관적 렌더·재전송·연결 상태(Task 020B)까지 갖춘 완성형입니다. 게시글 공유 카드(PostLinkCard)만 Task 020C 몫이라 자리표시자로 남아 있습니다.",
   items: [
     {
       name: "메시지 목록 (MessageList)",
-      note: "0건이면 빈 상태로 전환된다(FR-050 AC1). '오류'는 구독 자체의 실패(D-030 ③) — 이미 불러온 메시지는 유지한 채 배너만 뜬다.",
+      note: "0건이면 빈 상태로 전환된다(FR-050 AC1). 연결 상태(끊김·재연결)는 이 항목이 아니라 아래 'ConnectionBanner' 항목에서 확인한다 — Task 020B에서 인라인 배너를 방 상단 배너 하나로 합쳤다.",
       panels: {
         default: (
           <PreviewFrame height={440}>
@@ -135,15 +186,28 @@ export const chatSection = defineSection({
             </div>
           </PreviewFrame>
         ),
-        error: (
-          <PreviewFrame height={440}>
-            <div className="flex h-full flex-col">
-              <ChatMessageListPreview
-                messages={SAMPLE_MESSAGES}
-                viewerProfileId={VIEWER_PROFILE_ID}
-                connectionError={strings.chat.room.connectionErrorDescription}
-              />
+      },
+    },
+    {
+      name: "연결 상태 배너 (ConnectionBanner)",
+      note: "FR-051 E2, NFR-009. 상태는 MessageRoomContainer가 브라우저 online/offline + 구독 onError를 lib/rules/chat-connection-state.ts 상태 기계로 판정해 내려주는 실제 prop이라 /sample 전용 escape hatch 없이 리터럴만 바꿔 넣었다(ConnectionBanner.tsx 모듈 docstring 참고).",
+      panels: {
+        default: (
+          <PreviewFrame height={80}>
+            <div className="flex h-full flex-col items-center justify-center gap-1 p-3 text-center text-xs text-muted-foreground">
+              <ConnectionBannerPreview status="connected" />
+              <span>연결이 정상이면 배너 자체가 렌더링되지 않습니다.</span>
             </div>
+          </PreviewFrame>
+        ),
+        loading: (
+          <PreviewFrame height={80}>
+            <ConnectionBannerPreview status="reconnecting" />
+          </PreviewFrame>
+        ),
+        error: (
+          <PreviewFrame height={120}>
+            <ConnectionBannerPreview status="disconnected" />
           </PreviewFrame>
         ),
       },
@@ -161,21 +225,25 @@ export const chatSection = defineSection({
     })),
     {
       name: "말풍선 변형 (MessageBubble)",
-      note: "본인/상대 · 텍스트/게시글 공유(자리표시자, Task 020C 예정) · 삭제된 메시지 4가지 모양.",
+      note: "본인/상대 · 텍스트/게시글 공유(자리표시자, Task 020C 예정) · 삭제된 메시지 · 전송 중(낙관적 렌더) · 전송 실패(재전송 버튼, FR-051 E1) 6가지 모양.",
       content: (
-        <PreviewFrame height={320}>
-          <div className="flex flex-col gap-3 p-4">
-            <MessageBubble message={SAMPLE_MESSAGES[1]} isOwn />
-            <MessageBubble message={SAMPLE_MESSAGES[0]} isOwn={false} />
-            <MessageBubble message={SAMPLE_MESSAGES[2]} isOwn={false} />
-            <MessageBubble message={SAMPLE_MESSAGES[3]} isOwn={false} />
-          </div>
+        <PreviewFrame height={420}>
+          <MessageBubblePreview
+            items={[
+              { message: SAMPLE_MESSAGES[1], isOwn: true },
+              { message: SAMPLE_MESSAGES[0], isOwn: false },
+              { message: SAMPLE_MESSAGES[2], isOwn: false },
+              { message: SAMPLE_MESSAGES[3], isOwn: false },
+              { message: SAMPLE_PENDING_MESSAGE, isOwn: true },
+              { message: SAMPLE_FAILED_MESSAGE, isOwn: true },
+            ]}
+          />
         </PreviewFrame>
       ),
     },
     {
       name: "입력창 (Composer)",
-      note: "실제 컴포넌트는 sendChatMessageAction Server Action에 물려 있어(auth.tsx의 SignupForm과 같은 이유) 여기서는 같은 UI 원자로 만든 정적 프리뷰만 둡니다 — 실제 전송은 /crews/[crewId]/chat에서 확인하세요.",
+      note: "실제 컴포넌트는 onSubmit을 통해 MessageRoomContainer.submitMessage(Server Action 호출 + 낙관적 렌더)로 이어져(auth.tsx의 SignupForm과 같은 이유) 여기서는 같은 UI 원자로 만든 정적 프리뷰만 둡니다 — 실제 전송은 /crews/[crewId]/chat에서 확인하세요. Task 020B부터 전송 자체는 낙관적이라(결과를 기다리지 않고 입력을 비운다) 이 컴포넌트 자체에는 더 이상 '전송 중' 상태가 없습니다 — 그 피드백은 위 MessageBubble의 '전송 중'/'전송 실패' 변형이 대신합니다.",
       panels: {
         default: (
           <PreviewFrame height={120}>
@@ -187,27 +255,14 @@ export const chatSection = defineSection({
             </div>
           </PreviewFrame>
         ),
-        loading: (
-          <PreviewFrame height={120}>
-            <div className="flex items-end gap-2 border-t border-border p-3">
-              <Textarea
-                placeholder={strings.chat.message.inputPlaceholder}
-                rows={1}
-                disabled
-                className="max-h-40"
-              />
-              <Button size="icon" disabled aria-label={strings.chat.message.send}>
-                <Loader2Icon aria-hidden="true" className="animate-spin" />
-              </Button>
-            </div>
-          </PreviewFrame>
-        ),
         error: (
           <PreviewFrame height={160}>
             <div className="flex flex-col gap-2 border-t border-border p-3">
               <Alert variant="destructive">
                 <AlertTriangleIcon aria-hidden="true" />
-                <AlertDescription>{strings.chat.message.errors.sendFailed}</AlertDescription>
+                <AlertDescription>
+                  {t((s) => s.chat.message.errors.tooLong, { max: CHAT_MESSAGE_MAX_LENGTH })}
+                </AlertDescription>
               </Alert>
               <div className="flex items-end gap-2">
                 <Textarea placeholder={strings.chat.message.inputPlaceholder} rows={1} className="max-h-40" />
