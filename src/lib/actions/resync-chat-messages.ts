@@ -52,7 +52,9 @@ export async function resyncChatMessagesAction(
 
   const page = await listMessages(room.id, { afterMessageId: input.afterMessageId });
   const items = await Promise.all(
-    page.items.map(async (message) => toMessageViewModel(message, await getProfileById(message.senderId))),
+    page.items.map(async (message) =>
+      toMessageViewModel(message, await getProfileById(message.senderId), input.crewId),
+    ),
   );
   return { items };
 }

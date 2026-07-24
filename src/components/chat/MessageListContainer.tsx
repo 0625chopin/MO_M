@@ -46,7 +46,9 @@ export async function MessageListContainer({ crewId }: { crewId: Id }) {
 
   const page = await listMessages(room.id, { limit: MESSAGE_PAGE_SIZE });
   const items = await Promise.all(
-    page.items.map(async (message) => toMessageViewModel(message, await getProfileById(message.senderId))),
+    page.items.map(async (message) =>
+      toMessageViewModel(message, await getProfileById(message.senderId), crewId),
+    ),
   );
   const initialMessages = [...items].reverse(); // listMessages는 최신순 → 화면 표시는 오름차순.
 

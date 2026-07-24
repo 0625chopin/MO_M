@@ -1,3 +1,5 @@
+import type { PostLinkCardViewModel } from "@/components/chat/post-link-card-view-models";
+import { resolvePostLinkCard } from "@/components/chat/resolve-post-link-card";
 import { strings } from "@/lib/strings";
 import type { ChatMessage, ChatMessageType, Id, ISODateTimeString, Profile } from "@/lib/types";
 
@@ -17,6 +19,9 @@ export interface MessageViewModel {
   type: ChatMessageType;
   body: string | null;
   refPostId: Id | null;
+  /** `type === "post_link"`이고 `refPostId`가 있을 때만 값이 있다 — `toMessageViewModel`이
+   *  `resolvePostLinkCard`(Task 020C, FR-052)로 조인해 채운다. `PostLinkCard`가 그대로 받는다. */
+  postLinkCard: PostLinkCardViewModel | null;
   clientKey: string;
   createdAt: ISODateTimeString;
   deletedAt: ISODateTimeString | null;
@@ -67,6 +72,7 @@ export function createOptimisticTimelineItem(input: OptimisticMessageInput): Cha
     type: "text",
     body: input.body,
     refPostId: null,
+    postLinkCard: null,
     clientKey: input.clientKey,
     createdAt: input.createdAt,
     deletedAt: null,
@@ -77,11 +83,18 @@ export function createOptimisticTimelineItem(input: OptimisticMessageInput): Cha
 /**
  * `MessageListContainer`(초기 조회)·`send-chat-message.ts`·`load-earlier-messages.ts`(Server
  * Action) 세 곳이 공유하는 조인 로직. 한 곳에서만 바뀌면 되도록 여기 모아 둔다.
+ *
+ * `crewId`는 이 메시지가 속한 채팅방의 크루다(`ChatRoom.crewId`, 방 하나는 크루 하나에
+ * 고정) — `type === "post_link"`일 때 `resolvePostLinkCard`(Task 020C, FR-052)가 "다른 크루
+ * 게시글인가"를 판정하는 기준으로 쓴다. `Promise`를 반환하도록 바뀐 것은 이 조인이 추가된
+ * Task 020C부터다 — 세 호출부 모두 이미 `Promise.all`/`map(async ...)` 안에서 부르고 있어
+ * 호출 형태 자체는 바뀌지 않는다(`await`만 그대로 유효하다).
  */
-export function toMessageViewModel(
+export async function toMessageViewModel(
   message: ChatMessage,
   author: Pick<Profile, "displayName" | "avatarUrl"> | null,
-): MessageViewModel {
+  crewId: Id,
+): Promise<MessageViewModel> {
   return {
     id: message.id,
     roomId: message.roomId,
@@ -91,6 +104,10 @@ export function toMessageViewModel(
     type: message.type,
     body: message.body,
     refPostId: message.refPostId,
+    postLinkCard:
+      message.type === "post_link" && message.refPostId
+        ? await resolvePostLinkCard(message.refPostId, crewId)
+        : null,
     clientKey: message.clientKey,
     createdAt: message.createdAt,
     deletedAt: message.deletedAt,

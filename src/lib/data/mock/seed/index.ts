@@ -166,6 +166,7 @@ export function buildBulkSeed(
     meetupGen.meetups,
     crewGen.staffMemberships,
     crewGen.removedMemberships,
+    crewIdByBoardId,
   );
 
   return {

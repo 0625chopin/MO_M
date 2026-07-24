@@ -89,7 +89,7 @@ export async function sendChatMessageAction(
   }
 
   const author = await getProfileById(session.profileId);
-  const viewModel = toMessageViewModel(result.data, author);
+  const viewModel = await toMessageViewModel(result.data, author, crewId);
 
   return { message: viewModel };
 }

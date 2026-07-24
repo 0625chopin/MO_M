@@ -3,6 +3,7 @@
 import { Loader2Icon, MessageCircleIcon } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
+import { loadScrollAnchor, saveScrollAnchor } from "@/components/chat/chat-scroll-storage";
 import type { ChatTimelineItem } from "@/components/chat/message-view-models";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
@@ -10,6 +11,8 @@ import { strings } from "@/lib/strings";
 import type { Id } from "@/lib/types";
 
 export interface MessageListProps {
+  /** 스크롤 위치·읽음 지점 앵커(FR-053 AC2)를 방 단위로 저장·복원하는 키로 쓴다. */
+  roomId: Id;
   /** 오래된 → 최신 순(화면에 보이는 순서 그대로). 서버 확정 메시지 뒤에 로컬 낙관적(pending·
    *  failed) 메시지가 이어 붙는다 — 컨테이너가 이미 이 순서로 합쳐 내려준다(Task 020B). */
   messages: ChatTimelineItem[];
@@ -38,12 +41,19 @@ export interface MessageListProps {
  * 사용자가 보던 위치를 유지한다. 새 메시지가 실시간으로 도착했을 때는 사용자가 하단 근처에
  * 있을 때만 따라 내려간다(과거 메시지를 읽는 중에 강제로 끌어내리지 않는다).
  *
+ * **스크롤 위치·읽음 지점 복원(Task 020C, FR-053 AC2)**: 최초 진입 시 무조건 최하단으로 가지
+ * 않는다 — `chat-scroll-storage.ts`에 저장된 앵커 메시지 id가 있으면(게시글 카드를 눌러 상세로
+ * 갔다가 돌아온 경우) 그 메시지로 스크롤한다. 앵커는 스크롤 이벤트마다(rAF로 스로틀) 현재 맨
+ * 위에 보이는 메시지 id로 계속 갱신한다 — 클릭 시점에 별도로 저장하지 않아도 이미 최신값이다.
+ * `MessageBubble`의 두 루트가 갖는 `data-message-id`로 앵커를 찾는다.
+ *
  * **Task 020B에서 `connectionError` prop을 제거했다**: 구독 실패(D-030 ③ 도메인 오류)를 이
  * 목록 안에 인라인 배너로 보여주던 것을, `MessageRoomContainer`가 소유하는 연결 상태 기계
  * (`lib/rules/chat-connection-state.ts`)와 `ConnectionBanner`로 옮겼다 — 브라우저 온/오프라인과
  * 구독 오류를 같은 상태로 합쳐 방 상단 한 곳에서만 보여주기 위해서다(NFR-009, 중복 표시 방지).
  */
 export function MessageList({
+  roomId,
   messages,
   viewerProfileId,
   hasMore,
@@ -70,7 +80,16 @@ export function MessageList({
     const firstId = messages[0]?.id ?? null;
 
     if (isFirstRenderRef.current) {
-      el.scrollTop = el.scrollHeight; // 최초 진입: 최신 메시지(하단)로 스크롤(FR-051 AC3).
+      const anchorId = loadScrollAnchor(roomId);
+      const anchorEl = anchorId
+        ? el.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(anchorId)}"]`)
+        : null;
+      if (anchorEl) {
+        // 상세 페이지에서 돌아온 복귀(FR-053 AC2) — 보던 메시지 위치로 복원한다.
+        anchorEl.scrollIntoView({ block: "center" });
+      } else {
+        el.scrollTop = el.scrollHeight; // 앵커 없음: 최초 진입, 최신 메시지(하단)로 스크롤(FR-051 AC3).
+      }
       isFirstRenderRef.current = false;
     } else if (firstId !== prevFirstIdRef.current) {
       // 맨 앞 메시지 id가 바뀌었다 = 위로 이어 로드로 오래된 메시지가 앞에 붙었다.
@@ -85,7 +104,40 @@ export function MessageList({
 
     prevFirstIdRef.current = firstId;
     prevScrollHeightRef.current = el.scrollHeight;
-  }, [messages]);
+  }, [messages, roomId]);
+
+  // 앵커 갱신(Task 020C, FR-053 AC2) — 스크롤할 때마다(rAF 스로틀) 현재 맨 위에 보이는
+  // 메시지 id를 저장해 둔다. 클릭 시점에 별도로 저장하지 않아도 되도록 항상 최신값을 유지한다.
+  useEffect(() => {
+    const el: HTMLDivElement | null = scrollRef.current;
+    if (!el) return;
+    const container: HTMLDivElement = el;
+    let frame: number | null = null;
+
+    function persistTopmostVisible(container: HTMLDivElement) {
+      frame = null;
+      const containerTop = container.getBoundingClientRect().top;
+      const rows = container.querySelectorAll<HTMLElement>("[data-message-id]");
+      for (const row of rows) {
+        if (row.getBoundingClientRect().bottom > containerTop) {
+          const id = row.dataset.messageId;
+          if (id) saveScrollAnchor(roomId, id);
+          return;
+        }
+      }
+    }
+
+    function handleScroll() {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => persistTopmostVisible(container));
+    }
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, [roomId]);
 
   useLayoutEffect(() => {
     const sentinel = sentinelRef.current;

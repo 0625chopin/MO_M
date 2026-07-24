@@ -2,6 +2,8 @@ import { AlertTriangleIcon, SendIcon } from "lucide-react";
 
 import type { ChatTimelineItem } from "@/components/chat/message-view-models";
 import { MessageListSkeleton } from "@/components/chat/MessageListSkeleton";
+import type { PostLinkCardViewModel } from "@/components/chat/post-link-card-view-models";
+import { PostLinkCard } from "@/components/chat/PostLinkCard";
 import type { RouteErrorKind } from "@/components/errors/route-error-kind";
 import { RouteErrorBoundaryPreview } from "@/components/errors/RouteErrorBoundaryPreview";
 import { PreviewFrame } from "@/components/sample/PreviewFrame";
@@ -42,13 +44,53 @@ import { strings, t } from "@/lib/strings";
  * 하면 3상태를 보여줄 수 있다(`DayDetailPanel`류의 escape hatch와 다른 이유는
  * `ConnectionBanner.tsx` 모듈 docstring 참고 — 020B 팀장 특별 지시에 대한 판단).
  *
- * "오류"는 세 층으로 나눠 등록한다(D-030 ③): **방 접근 자체의 거부**(`chat:send_message` 판정
+ * "오류"는 네 층으로 나눠 등록한다(D-030 ③): **방 접근 자체의 거부**(`chat:send_message` 판정
  * 실패 — `MessageListContainer`가 던지고 `error.tsx`가 받는다, 게시판의 `board:read` 거부와
  * 같은 패턴) · **연결 상태**(`ConnectionBanner`의 "disconnected" — 브라우저 오프라인 또는 구독
- * 자체의 실패) · **메시지별 전송 실패**(`MessageBubble`의 "failed" 말풍선 — 재전송 버튼 포함).
+ * 자체의 실패) · **메시지별 전송 실패**(`MessageBubble`의 "failed" 말풍선 — 재전송 버튼 포함) ·
+ * **게시글 카드의 도메인 오류**(`PostLinkCard`의 삭제됨·다른 크루, FR-052 E1·E2 — 아래 참고).
+ *
+ * **`PostLinkCard`(FR-052·053, Task 020C)는 함수 prop이 없다** — `Link`만 쓰는 순수 표현
+ * 컴포넌트라(`BoardListItem.tsx`와 같은 이유) `/sample` 전용 클라이언트 래퍼 없이 이 서버
+ * 컴포넌트에서 바로 렌더한다. 일반글·제안글(투표 상태·남은 시간, AC3)은 "게시글 공유 카드"
+ * 항목의 `default` 패널에, 삭제됨·다른 크루(D-030 ③ 도메인 오류)는 같은 항목의 `error` 패널에
+ * 나눠 둔다 — `loading`·`empty`는 이 컴포넌트에 해당 개념이 없어 비운다(`ConnectionBanner`
+ * 항목이 이미 `empty`를 비우는 것과 같은 전례).
  */
 
 const VIEWER_PROFILE_ID = "profile-1";
+
+/** `resolvePostLinkCard`가 실제로 만드는 모양을 손으로 채운 것(`fixtures.ts`의 post-1과 같은
+ *  일반글) — 아래 "게시글 공유 카드" 항목과 "메시지 목록"/"말풍선 변형" 양쪽이 공유한다. */
+const SAMPLE_POST_LINK_GENERAL: PostLinkCardViewModel = {
+  kind: "post",
+  crewId: "crew-1",
+  postId: "post-1",
+  postType: "general",
+  title: "이번 주 코스 공지",
+  authorDisplayName: "서지훈",
+  authorAvatarUrl: null,
+  poll: null,
+};
+
+/** `fixtures.ts`의 post-2(진행 중인 모임 제안)와 같은 값 — 투표 상태·남은 시간(FR-052 AC3)을
+ *  함께 보여준다. `remainingMs`는 고정 데모값이다 — `/sample`은 정적 데이터라 렌더 시각을
+ *  계산하지 않는다(`PollCountdown`이 소비하는 값이지 이 파일이 갱신하는 값이 아니다). */
+const SAMPLE_POST_LINK_PROPOSAL: PostLinkCardViewModel = {
+  kind: "post",
+  crewId: "crew-1",
+  postId: "post-2",
+  postType: "meetup_proposal",
+  title: "8/1(토) 아침 러닝 어때요?",
+  authorDisplayName: "김유나",
+  authorAvatarUrl: null,
+  poll: {
+    status: "open",
+    closesAt: "2026-07-31T23:59:59.000Z",
+    remainingMs: 7 * 24 * 60 * 60 * 1000,
+    isAwaitingClosure: false,
+  },
+};
 
 const SAMPLE_MESSAGES: ChatTimelineItem[] = [
   {
@@ -60,6 +102,7 @@ const SAMPLE_MESSAGES: ChatTimelineItem[] = [
     type: "text",
     body: "다들 코스 확인해주세요~",
     refPostId: null,
+    postLinkCard: null,
     clientKey: "sample-message-1",
     createdAt: "2026-07-20T09:05:00.000Z",
     deletedAt: null,
@@ -74,6 +117,7 @@ const SAMPLE_MESSAGES: ChatTimelineItem[] = [
     type: "text",
     body: "넵! 확인했습니다. 이번 주도 화이팅이에요 🙌",
     refPostId: null,
+    postLinkCard: null,
     clientKey: "sample-message-2",
     createdAt: "2026-07-20T09:07:00.000Z",
     deletedAt: null,
@@ -88,6 +132,7 @@ const SAMPLE_MESSAGES: ChatTimelineItem[] = [
     type: "post_link",
     body: null,
     refPostId: "post-2",
+    postLinkCard: SAMPLE_POST_LINK_PROPOSAL,
     clientKey: "sample-message-3",
     createdAt: "2026-07-22T10:01:00.000Z",
     deletedAt: null,
@@ -102,6 +147,7 @@ const SAMPLE_MESSAGES: ChatTimelineItem[] = [
     type: "text",
     body: "(이 메시지는 삭제됐어요)",
     refPostId: null,
+    postLinkCard: null,
     clientKey: "sample-message-4",
     createdAt: "2026-07-22T10:03:00.000Z",
     deletedAt: "2026-07-22T10:04:00.000Z",
@@ -120,6 +166,7 @@ const SAMPLE_PENDING_MESSAGE: ChatTimelineItem = {
   type: "text",
   body: "지금 전송 중인 메시지예요",
   refPostId: null,
+  postLinkCard: null,
   clientKey: "sample-pending-clientkey",
   createdAt: "2026-07-22T10:05:00.000Z",
   deletedAt: null,
@@ -136,6 +183,7 @@ const SAMPLE_FAILED_MESSAGE: ChatTimelineItem = {
   type: "text",
   body: "네트워크가 끊겨서 보내지 못한 메시지예요",
   refPostId: null,
+  postLinkCard: null,
   clientKey: "sample-failed-clientkey",
   createdAt: "2026-07-22T10:06:00.000Z",
   deletedAt: null,
@@ -153,18 +201,19 @@ const DOMAIN_ERROR_ITEMS: Array<{ kind: RouteErrorKind; name: string; note: stri
 export const chatSection = defineSection({
   id: "chat",
   label: "채팅",
-  title: "채팅 — MessageList · MessageBubble · Composer · ConnectionBanner",
+  title: "채팅 — MessageList · MessageBubble · PostLinkCard · Composer · ConnectionBanner",
   description:
-    "FR-050·051. 최신 50건 + 위로 이어 로드(윈도잉, D-023)와 lib/realtime 구독(Task 008)을 소비하는 첫 화면이자, 낙관적 렌더·재전송·연결 상태(Task 020B)까지 갖춘 완성형입니다. 게시글 공유 카드(PostLinkCard)만 Task 020C 몫이라 자리표시자로 남아 있습니다.",
+    "FR-050~053. 최신 50건 + 위로 이어 로드(윈도잉, D-023)와 lib/realtime 구독(Task 008)을 소비하는 첫 화면이자, 낙관적 렌더·재전송·연결 상태(Task 020B), 게시글 공유 카드·클라이언트 라우팅 이동·스크롤 복원(Task 020C)까지 갖춘 완성형입니다.",
   items: [
     {
       name: "메시지 목록 (MessageList)",
-      note: "0건이면 빈 상태로 전환된다(FR-050 AC1). 연결 상태(끊김·재연결)는 이 항목이 아니라 아래 'ConnectionBanner' 항목에서 확인한다 — Task 020B에서 인라인 배너를 방 상단 배너 하나로 합쳤다.",
+      note: "0건이면 빈 상태로 전환된다(FR-050 AC1). 연결 상태(끊김·재연결)는 이 항목이 아니라 아래 'ConnectionBanner' 항목에서 확인한다 — Task 020B에서 인라인 배너를 방 상단 배너 하나로 합쳤다. 스크롤 위치·읽음 지점 복원(FR-053 AC2)은 이 프리뷰에서 직접 재현하기 어렵다 — 실제 채팅방(/crews/[crewId]/chat)에서 게시글 카드를 눌러 상세로 갔다가 뒤로 가기로 확인하세요.",
       panels: {
         default: (
           <PreviewFrame height={440}>
             <div className="flex h-full flex-col">
               <ChatMessageListPreview
+                roomId="room-1"
                 messages={SAMPLE_MESSAGES}
                 viewerProfileId={VIEWER_PROFILE_ID}
                 hasMore
@@ -182,7 +231,7 @@ export const chatSection = defineSection({
         empty: (
           <PreviewFrame height={220}>
             <div className="flex h-full flex-col">
-              <ChatMessageListPreview messages={[]} viewerProfileId={VIEWER_PROFILE_ID} />
+              <ChatMessageListPreview roomId="room-1" messages={[]} viewerProfileId={VIEWER_PROFILE_ID} />
             </div>
           </PreviewFrame>
         ),
@@ -224,8 +273,30 @@ export const chatSection = defineSection({
       },
     })),
     {
+      name: "게시글 공유 카드 (PostLinkCard)",
+      note: "FR-052·053, Task 020C. 카드 클릭은 getPostDetailHref(crewId, postId)로 클라이언트 라우팅 이동한다(R-016 — 경로 문자열이 아니라 리소스 ID 기준). '기본'은 일반글·모임 제안글(투표 상태·남은 시간 포함, AC3) 두 성공 분기, '오류'는 삭제된 게시글(FR-052 E2)·다른 크루 게시글(FR-052 E1, D-030 ③ 도메인 오류) 두 분기다.",
+      panels: {
+        default: (
+          <PreviewFrame height={320}>
+            <div className="flex flex-col gap-3 p-4">
+              <PostLinkCard state={SAMPLE_POST_LINK_GENERAL} />
+              <PostLinkCard state={SAMPLE_POST_LINK_PROPOSAL} />
+            </div>
+          </PreviewFrame>
+        ),
+        error: (
+          <PreviewFrame height={200}>
+            <div className="flex flex-col gap-3 p-4">
+              <PostLinkCard state={{ kind: "deleted" }} />
+              <PostLinkCard state={{ kind: "forbidden" }} />
+            </div>
+          </PreviewFrame>
+        ),
+      },
+    },
+    {
       name: "말풍선 변형 (MessageBubble)",
-      note: "본인/상대 · 텍스트/게시글 공유(자리표시자, Task 020C 예정) · 삭제된 메시지 · 전송 중(낙관적 렌더) · 전송 실패(재전송 버튼, FR-051 E1) 6가지 모양.",
+      note: "본인/상대 · 텍스트/게시글 공유(실제 PostLinkCard, Task 020C) · 삭제된 메시지 · 전송 중(낙관적 렌더) · 전송 실패(재전송 버튼, FR-051 E1) 6가지 모양.",
       content: (
         <PreviewFrame height={420}>
           <MessageBubblePreview

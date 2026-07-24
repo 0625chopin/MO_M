@@ -9,6 +9,7 @@ import { errorsSection } from "@/components/sample/sections/errors";
 import { formsSection } from "@/components/sample/sections/forms";
 import { foundationSection } from "@/components/sample/sections/foundation";
 import { meetupSection } from "@/components/sample/sections/meetup";
+import { notificationsSection } from "@/components/sample/sections/notifications";
 import { overlaysSection } from "@/components/sample/sections/overlays";
 import { pollSection } from "@/components/sample/sections/poll";
 import { primitivesSection } from "@/components/sample/sections/primitives";
@@ -43,4 +44,5 @@ export const SHOWCASE_SECTIONS: ShowcaseSection[] = [
   chatSection,
   accountSection,
   crewsSection,
+  notificationsSection,
 ];

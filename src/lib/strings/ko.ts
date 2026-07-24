@@ -261,8 +261,93 @@ export const ko = {
         },
       },
     },
+    /**
+     * SC-14 멤버 관리 페이지(F009·F010·F012~F015, F032, Task 017A). 역할 정렬 목록·초대
+     * 다이얼로그·가입 신청 승인/반려 탭·임원 임명 문구를 모은다.
+     */
     members: {
       title: "멤버 관리",
+      roleLabels: {
+        owner: "오너",
+        staff: "임원",
+        member: "크루원",
+      },
+      /** 본인 행에 붙는 표시(FR-024·FR-026 — 임명·탈퇴 대상이 자기 자신인지 구분). */
+      selfBadge: "나",
+      memberCountLabel: "크루원 {count}명",
+      /** FR-024 임원 임명·해임(D-002). 오너 전용 — `MemberList`의 행별 버튼. */
+      appoint: {
+        appointButton: "임원으로 임명",
+        dismissButton: "임원 해임",
+        submitPending: "처리하는 중…",
+        errors: {
+          sessionExpired: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+          notAllowed: "임원 임명 권한이 없어요",
+          /** FR-024 E2 — 대상이 이미 탈퇴·강퇴돼 활성 크루원이 아님. */
+          targetInactive: "이미 크루를 떠난 크루원이에요",
+          /** FR-024 E1 — 오너 본인은 임명·해임 대상이 아니다. */
+          targetIsOwner: "오너는 임명·해임 대상이 아니에요",
+          failed: "처리하지 못했어요. 다시 시도해 주세요.",
+        },
+      },
+      /** FR-026 크루 탈퇴 — `MemberList`의 본인 행 전용 버튼. */
+      leave: {
+        button: "탈퇴하기",
+        submitPending: "탈퇴하는 중…",
+        errors: {
+          sessionExpired: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+          notAllowed: "탈퇴할 수 없어요",
+          /** 오너는 오너 이양(FR-025)이나 크루 해산(FR-013) 전에는 탈퇴할 수 없다 — 둘 다
+           *  아직 구현되지 않아(v0.2·후속 Task 대상) 이 문구가 안내하는 조치를 지금 화면에서
+           *  바로 진행할 수는 없다. */
+          ownerMustTransferOrDisband: "오너는 먼저 오너를 위임하거나 크루를 해산해야 탈퇴할 수 있어요",
+          failed: "탈퇴하지 못했어요. 다시 시도해 주세요.",
+        },
+      },
+      /** FR-020 크루원 초대 다이얼로그. 핸들 검색은 `UserSearchField`(계정 설정과 공유,
+       *  Task 015B 모듈 docstring 참고)를 그대로 재사용한다. */
+      invite: {
+        trigger: "크루원 초대",
+        dialogTitle: "크루원 초대",
+        dialogDescription: "핸들로 검색해 초대를 보내요. 14일 안에 응답하지 않으면 초대가 만료돼요.",
+        inviteButton: "초대 보내기",
+        submitPending: "초대하는 중…",
+        sentNotice: "초대를 보냈어요",
+        errors: {
+          sessionExpired: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+          notAllowed: "초대 권한이 없어요",
+          handleNotFound: "그 핸들의 사용자를 찾을 수 없어요",
+          /** `lib/rules/invite-eligibility.ts`의 `InviteIneligibleReason`과 키를 맞췄다. */
+          self_invite: "자기 자신은 초대할 수 없어요",
+          already_member: "이미 크루원이에요",
+          already_invited: "이미 초대를 보낸 사용자예요",
+        },
+      },
+      /** FR-023 가입 신청 승인·반려 탭. `requests.status.*`는 `JoinRequestStatus` 값과 문구를
+       *  1:1로 맞췄다 — I-040이 요구하는 대로 "반려됨"·"철회함"을 구분해서 보여준다. */
+      requests: {
+        pendingTab: "대기 중",
+        historyTab: "처리 내역",
+        pendingEmpty: "대기 중인 가입 신청이 없어요",
+        historyEmpty: "처리한 가입 신청이 없어요",
+        messageLabel: "한 줄 인사",
+        approveButton: "승인",
+        rejectButton: "반려",
+        submitPending: "처리하는 중…",
+        status: {
+          approved: "승인됨",
+          rejected: "반려됨",
+          /** I-040 — 신청자 본인이 철회한 건. "반려됨"과 다른 문구로 구분한다. */
+          withdrawn: "철회함",
+        },
+        errors: {
+          sessionExpired: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+          notAllowed: "승인·반려 권한이 없어요",
+          /** FR-023 E1(동시성 — 다른 임원이 먼저 처리)·E2(신청자가 이미 철회)를 함께 담는다. */
+          alreadyDecided: "이미 처리된 신청이에요",
+          decideFailed: "처리하지 못했어요. 다시 시도해 주세요.",
+        },
+      },
     },
     settings: {
       title: "크루 설정",
@@ -651,12 +736,14 @@ export const ko = {
       reconnecting: "다시 연결하는 중…",
       loadingEarlier: "이전 메시지를 불러오는 중…",
     },
+    /** `PostLinkCard`(Task 020C, FR-052) 전용 문구. 제목·작성자·유형 배지·투표 상태는
+     *  각각 `board.postType`·`vote.status`·`vote.summary`를 그대로 재사용한다(§4 "같은
+     *  판정·같은 개념" — `PostTypeBadge`·`PollStatusBadge`·`PollCountdown` 컴포넌트 자체를
+     *  재사용하므로 문구도 저절로 공유된다). 카드로 확장하지 않는 두 분기(FR-052 E1·E2)만
+     *  여기 따로 둔다. */
     postCard: {
       deletedPost: common.post.deleted,
       otherCrewPost: "다른 크루의 게시글이에요",
-      /** Task 020A는 게시글 링크 메시지를 유형만 구분해 자리표시자로 보여준다 — 제목·작성자·
-       *  투표 상태가 담긴 실제 카드(FR-052)는 Task 020C(PostLinkCard)가 채운다. */
-      linkedPost: "게시글 공유",
     },
     message: {
       deleted: "삭제된 메시지입니다",
@@ -689,14 +776,39 @@ export const ko = {
     },
   },
 
+  /**
+   * 알림 토스트(FR-070)·알림 센터(FR-071, Task 023). `messages.*`는 알림 유형(FR-070 "대상
+   * 이벤트" 10종, `NotificationType`과 1:1 대응)별 안내 문구로, 토스트 본문과 알림 센터 목록
+   * 항목이 완전히 같은 문구를 공유한다(README §4 "같은 개체를 가리키면 common에 준하는 공유" —
+   * 여기서는 도메인이 하나라 `notification` 하위에 두고 두 화면이 함께 참조한다). 알림이 실제로
+   * 가리키는 경로(리소스 ID 기반)는 이 모듈이 아니라 `notification-routing.ts`가 계산한다(R-016,
+   * `src/lib/strings/README.md` §9와 같은 경계).
+   */
   notification: {
     center: {
       title: "알림",
       empty: "새 알림이 없어요",
+      emptyDescription: "새로운 소식이 오면 여기에 모아서 보여드려요",
       markAllRead: "모두 읽음으로 표시",
+      loadError: "알림을 불러오지 못했어요",
+      loadErrorDescription: "잠시 후 다시 시도해 주세요",
     },
-    toast: {
-      voteClosed: "투표가 종료되었어요",
+    bell: {
+      triggerLabel: "알림 센터 열기",
+      viewAll: "모든 알림 보기",
+      goTo: "바로가기",
+    },
+    messages: {
+      pollClosed: "투표가 종료됐어요",
+      joinRequestReceived: "새 가입 신청이 있어요",
+      joinRequestApproved: "가입 신청이 승인됐어요",
+      joinRequestRejected: "가입 신청이 반려됐어요",
+      invitationReceived: "크루 초대를 받았어요",
+      staffAppointed: "임원으로 임명됐어요",
+      memberRemoved: "크루에서 강퇴됐어요",
+      meetupCreated: "새 모임이 만들어졌어요",
+      meetupCancelled: "모임이 취소됐어요",
+      postCommented: "내 글에 새 댓글이 달렸어요",
     },
   },
 

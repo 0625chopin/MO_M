@@ -57,10 +57,35 @@ export async function createNotification(input: CreateNotificationInput): Promis
   return notification;
 }
 
-/** 알림 읽음 처리. 이미 읽은 알림에 다시 호출해도 조용히 성공한다(멱등). */
-export async function markNotificationRead(id: Id): Promise<DataResult<Notification>> {
+/**
+ * 알림 읽음 처리. 이미 읽은 알림에 다시 호출해도 조용히 성공한다(멱등).
+ * `recipientId`로 소유권을 확인한다 — 다른 사람의 알림 id를 추측해 넘기는 경로를 막는다
+ * (`withdraw-join-request.ts`의 "조회 조건 자체가 게이트" 패턴과 같은 이유).
+ */
+export async function markNotificationRead(id: Id, recipientId: Id): Promise<DataResult<Notification>> {
   const notification = store.notifications.find((n) => n.id === id);
   if (!notification) return err("not_found", `notification ${id} 를 찾을 수 없다.`);
+  if (notification.recipientId !== recipientId) {
+    return err("forbidden", `notification ${id} 는 profile ${recipientId} 소유가 아니다.`);
+  }
   notification.readAt ??= new Date().toISOString();
   return ok(notification);
+}
+
+/** FR-071 AC3 "모두 읽음" — 대상자의 안읽음 알림을 전부 읽음 처리하고 처리 건수를 반환한다. */
+export async function markAllNotificationsRead(recipientId: Id): Promise<number> {
+  const now = new Date().toISOString();
+  let count = 0;
+  for (const notification of store.notifications) {
+    if (notification.recipientId === recipientId && !notification.readAt) {
+      notification.readAt = now;
+      count += 1;
+    }
+  }
+  return count;
+}
+
+/** FR-071 AC1 "헤더 배지" — 안읽음 개수만 필요한 호출부(헤더 배지)를 위한 가벼운 카운트. */
+export async function countUnreadNotifications(recipientId: Id): Promise<number> {
+  return store.notifications.filter((n) => n.recipientId === recipientId && !n.readAt).length;
 }

@@ -2,6 +2,7 @@ import { AlertTriangleIcon, Loader2Icon } from "lucide-react";
 
 import { formatMessageTime } from "@/components/chat/format-message-time";
 import type { ChatTimelineItem } from "@/components/chat/message-view-models";
+import { PostLinkCard } from "@/components/chat/PostLinkCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { strings } from "@/lib/strings";
 import { cn } from "@/lib/utils";
@@ -28,11 +29,16 @@ export interface MessageBubbleProps {
  * `onRetry`를 호출하는 재전송 버튼을 덧붙인다. `deliveryStatus`는 항상 본인 메시지에서만
  * `"pending"`/`"failed"`가 되므로(다른 사용자의 메시지는 서버가 확정한 뒤에만 이 화면에
  * 도착한다) 상대 메시지 쪽 분기는 신경 쓰지 않는다.
+ *
+ * **`data-message-id`(Task 020C, FR-053 AC2)**: 두 루트 모두에 붙인다 — `MessageList`가
+ * 스크롤 위치·읽음 지점을 복원할 때 이 속성으로 앵커 메시지를 찾는다(`chat-scroll-storage.ts`
+ * 참고). 새 조건 분기를 추가할 때(예: 다른 삭제 표시 방식) 이 속성을 빠뜨리면 그 메시지 종류로
+ * 스크롤이 복원되지 않는다.
  */
 export function MessageBubble({ message, isOwn, onRetry }: MessageBubbleProps) {
   if (message.deletedAt) {
     return (
-      <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
+      <div data-message-id={message.id} className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
         <p className="text-sm text-muted-foreground italic">{strings.chat.message.deleted}</p>
       </div>
     );
@@ -43,6 +49,7 @@ export function MessageBubble({ message, isOwn, onRetry }: MessageBubbleProps) {
 
   return (
     <div
+      data-message-id={message.id}
       className={cn(
         "flex flex-col gap-1 @sm:max-w-[75%]",
         isOwn ? "items-end self-end" : "items-start self-start",
@@ -109,13 +116,9 @@ function MessageContent({
   pending: boolean;
 }) {
   if (message.type === "post_link") {
-    // FR-052의 실제 카드(제목·작성자·유형·투표 상태)는 Task 020C(PostLinkCard) 몫이다 — 여기서는
-    // 메시지 유형이 게시글 공유라는 것만 시각적으로 구분해 둔다.
-    return (
-      <div className="rounded-2xl border border-dashed border-border bg-card px-3 py-2 text-sm text-muted-foreground">
-        {strings.chat.postCard.linkedPost}
-      </div>
-    );
+    // postLinkCard가 null인 경우(방어적 분기 — 정상 경로에서는 sendMessage가 refPostId를
+    // 강제하고 toMessageViewModel이 항상 조인한다)는 "삭제됨"과 같은 안전한 기본값으로 그린다.
+    return <PostLinkCard state={message.postLinkCard ?? { kind: "deleted" }} />;
   }
 
   return (

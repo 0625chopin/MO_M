@@ -195,6 +195,30 @@ function createSeed() {
     },
   ];
 
+  /** crew-2(board-2) 소속 게시글 — `posts`(crew-1)와 분리해 둔다. 목적은 오직 아래
+   *  message-3의 "다른 크루 게시글 링크" 데모(FR-052 E1, `PostLinkCard`의 forbidden 분기,
+   *  Task 020C)뿐이다 — room-1(crew-1)에서 board-2 소속 글을 참조해 크로스 크루 상황을
+   *  재현한다. 실제 전송 경로(`sendMessage`)는 이런 조합을 막지 않으므로(호출자 검증 몫,
+   *  `lib/data/mock/chat.ts` docstring 참고) 방어적 재확인(`resolvePostLinkCard`)이 실제로
+   *  걸리는 시나리오를 시드로 증명해 둔다. */
+  const crew2Posts: Post[] = [
+    {
+      id: "post-4",
+      boardId: "board-2",
+      authorId: "profile-2",
+      type: "general",
+      title: "크루2 정기 모임 안내",
+      body: "이번 달 정기 모임은 다음 주 토요일입니다.",
+      meetupDate: null,
+      startTime: null,
+      place: null,
+      capacity: null,
+      createdAt: "2026-07-21T09:00:00.000Z",
+      editedAt: null,
+      deletedAt: null,
+    },
+  ];
+
   const polls: Poll[] = [
     {
       id: "poll-1",
@@ -324,7 +348,9 @@ function createSeed() {
       recipientId: "profile-2",
       type: "poll_closed",
       channel: "in_app",
-      payload: { pollId: "poll-2", outcome: "passed" },
+      // crewId·postId는 poll-2 → post-3(아래 posts 배열) → board-1 → crew-1 조인 결과를 손으로
+      // 채운 값이다(FR-045 AC4 "해당 제안글 상세로 이동", R-016 — 리소스 ID 기준).
+      payload: { pollId: "poll-2", outcome: "passed", crewId: "crew-1", postId: "post-3" },
       readAt: "2026-07-13T08:10:00.000Z",
       createdAt: "2026-07-12T23:59:59.000Z",
     },
@@ -353,6 +379,31 @@ function createSeed() {
       createdAt: "2026-07-22T10:01:00.000Z",
       deletedAt: null,
     },
+    {
+      id: "message-3",
+      roomId: "room-1",
+      senderId: "profile-1",
+      type: "post_link",
+      body: null,
+      // post-4는 crew-2(board-2) 소속 — `PostLinkCard`의 "다른 크루" 분기(FR-052 E1) 데모.
+      refPostId: "post-4",
+      clientKey: "seed-message-3",
+      createdAt: "2026-07-22T10:10:00.000Z",
+      deletedAt: null,
+    },
+    {
+      id: "message-4",
+      roomId: "room-1",
+      senderId: "profile-2",
+      type: "post_link",
+      body: null,
+      // 존재한 적 없는 게시글 id — `PostLinkCard`의 "삭제됨" 분기(FR-052 E2) 데모. 카운터
+      // 기반 자동 생성 id(`post-101`류)와 겹치지 않도록 접미사를 문자열로 둔다.
+      refPostId: "post-deleted-demo",
+      clientKey: "seed-message-4",
+      createdAt: "2026-07-22T10:15:00.000Z",
+      deletedAt: null,
+    },
   ];
 
   // ---- Task 010: 위 최소 픽스처 위에 실사용 규모(크루 15·멤버 300·게시글 200·
@@ -365,7 +416,7 @@ function createSeed() {
   ];
   const existingPostsByCrewId = new Map<Id, Post[]>([
     ["crew-1", posts],
-    ["crew-2", []],
+    ["crew-2", crew2Posts],
   ]);
   const bulk = buildBulkSeed(
     generateId,
@@ -382,7 +433,7 @@ function createSeed() {
     crewMemberships: [...crewMemberships, ...bulk.memberships],
     boards: [...boards, ...bulk.boards],
     chatRooms: [...chatRooms, ...bulk.chatRooms],
-    posts: [...posts, ...bulk.posts],
+    posts: [...posts, ...crew2Posts, ...bulk.posts],
     polls: [...polls, ...bulk.polls],
     pollEligibleVoters: [...pollEligibleVoters, ...bulk.pollEligibleVoters],
     pollVotes: [...pollVotes, ...bulk.pollVotes],
