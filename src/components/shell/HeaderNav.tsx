@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { strings, t } from "@/lib/strings";
@@ -61,6 +62,10 @@ export function HeaderNav({
               <Skeleton key={i} className="h-4 w-16" />
             ))}
           </div>
+          {/* 테마 토글은 세션 상태와 무관하므로 로딩 중에도 항상 조작할 수 있게 둔다. */}
+          <div className="ml-auto md:ml-0">
+            <ThemeToggle />
+          </div>
         </div>
       </header>
     );
@@ -110,6 +115,12 @@ export function HeaderNav({
             <NavLink key={item.key} item={item} active={pathname === item.href} />
           ))}
         </nav>
+
+        {/* 데스크톱에서는 flex-1 주 내비가 이 묶음을 오른쪽으로 밀어 계정 메뉴 옆에 붙는다.
+            모바일에서는 주·계정 내비가 숨겨져 `ml-auto`가 토글을 오른쪽 끝으로 보낸다. */}
+        <div className="ml-auto md:ml-0">
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

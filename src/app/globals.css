@@ -10,10 +10,12 @@
    전체 근거·수치는 `docs/design/design-language.md`. 요약하면 규칙은 둘이다.
 
    ① **채도는 데이터만 쓴다.** 화면의 유채색은 크루 12색(`--crew-*`)이 전부
-      가져간다. UI 크롬(버튼·경계·텍스트·포커스)은 채도 0.02 이하의 잉크
+      가져간다. UI 크롬(버튼·경계·텍스트·포커스)은 채도 0.024 이하의 잉크
       뉴트럴로 물러난다 — 크롬이 유채색을 쓰면 "이건 어느 크루 색이지?"라는
       오독이 생긴다. shadcn 기본값의 순수 무채(`oklch(x 0 0)`)와 다른 점은
-      미세한 청색 색조(H=258)이며, 배경만은 아래 ② 때문에 무채로 남는다.
+      **따뜻한 모래·갈색 색조(H≈68~86)** 이며(따뜻한 종이·잉크 개편, 2026-07-24),
+      배경만은 아래 ② 때문에 무채로 남는다. 개편 전에는 차가운 청색(H=258)이었고,
+      색조만 회전했을 뿐 명도(대비)는 그대로라 접근성 실측값이 유지된다.
 
    ② **배경·카드 표면의 밝기는 재량이 아니다.** 크루 12색은
       `docs/design/calendar-palette.md`가 라이트 `oklch(1 0 0)` / 다크
@@ -162,6 +164,47 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── 따뜻한 종이·잉크 개편 유틸리티 ──────────────────────────────────────────
+   크루 칩을 놓지 않는 표면(랜딩·인증·빈 화면 헤더)에만 쓰는 온기 장치들이다.
+   크루 칩이 놓이는 표면(`--background`·`--card`)에는 쓰지 않는다 — 3:1 대비 기준면을
+   흐리지 않기 위해서다(②). */
+
+/* 코르크보드 같은 은은한 햇빛 워시. 배경은 흰색을 유지하되(크루 대비 기준면) 그 위에
+   **온색 뉴트럴만으로** 옅은 방사형 그라데이션을 얹는다 — 채도=데이터 원칙(①)을 지키려
+   유채색(크루색)을 쓰지 않고 `--accent`/`--secondary`(온색 오프화이트) 두 겹만 겹친다.
+   다크에서도 두 토큰이 온색 짙은 값이라 같은 코드가 은은한 온기로 뒤집힌다. */
+@utility surface-warm {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(
+      1100px 520px at 12% -15%,
+      color-mix(in oklab, var(--accent) 90%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      880px 460px at 108% -5%,
+      color-mix(in oklab, var(--secondary) 82%, transparent),
+      transparent 55%
+    );
+}
+
+/* 디스플레이 제목 — 별도 서체 없이 Noto Sans KR 가변의 굵은 굵기 + 음수 트래킹으로 세운다
+   (§3 "제목은 서체 수가 아니라 굵기·트래킹으로"). 히어로·큰 섹션 제목용. */
+@utility display {
+  font-weight: 680;
+  letter-spacing: var(--tracking-display);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+/* 온색 그림자 — 순수 검정 그림자는 종이 위에서 차갑게 뜬다. 잉크 색조(H≈70)를 옅게 깔아
+   카드가 종이 위에 살짝 떠 있는 인상을 준다. 크루 칩 카드가 아니라 컨테이너 카드용. */
+@utility elevate {
+  box-shadow:
+    0 1px 2px oklch(0.2 0.02 70 / 0.05),
+    0 10px 30px -14px oklch(0.2 0.03 70 / 0.16);
+}
+
 :root {
   /* 무채·불변 — 위 ② 참고. 크루 팔레트 대비 검증의 기준면이다. */
   --background: oklch(1 0 0);
@@ -169,54 +212,62 @@
   --card: oklch(1 0 0);
   --popover: oklch(1 0 0);
 
-  /* 잉크 뉴트럴(H=258). 괄호 안은 흰 배경 대비 실측값. */
-  --foreground: oklch(0.16 0.014 258); /* 19.41 */
-  --card-foreground: oklch(0.16 0.014 258);
-  --popover-foreground: oklch(0.16 0.014 258);
-  --primary: oklch(0.24 0.022 258);
-  --primary-foreground: oklch(0.985 0.003 258);
-  --secondary: oklch(0.966 0.005 258);
-  --secondary-foreground: oklch(0.24 0.022 258);
-  --muted: oklch(0.966 0.005 258);
-  /* 5.28 — 기존 무채 `oklch(0.556 0 0)`(4.73)보다 오히려 여유가 늘었다.
-     보조 문구도 본문 기준 4.5:1을 지켜야 해서(NFR-018) 한 단계 조였다. */
-  --muted-foreground: oklch(0.53 0.016 258);
-  --accent: oklch(0.95 0.008 258);
-  --accent-foreground: oklch(0.24 0.022 258);
-  /* 6.15 — 기존 `oklch(0.577 0.245 27.325)`는 4.76으로 4.5:1을 겨우 넘겼다.
-     `text-destructive`로 본문에 직접 쓰이는 색이라 여유를 뒀다. */
+  /* 네이티브 위젯(스크롤바·폼 컨트롤·날짜 선택기)도 테마를 따르도록. 명시 라이트(`html.light`)
+     또는 미선택+OS 라이트일 때 이 값이 적용되고, 다크는 아래 `@media`·`.dark`가 덮어쓴다. */
+  color-scheme: light;
+
+  /* 잉크 뉴트럴 — **따뜻한 종이·잉크 개편(2026-07-24, D-038 후속)**. 색조를 차가운 청색
+     H=258에서 **따뜻한 모래·갈색 H≈68~86**으로 회전했다. **명도(L)는 접근성 대비를 결정하는
+     축이라 대비가 빡빡한 토큰은 그대로 두거나 더 어둡게만 옮겼다** — 색조 회전은 같은 L에서
+     휘도를 거의 바꾸지 않으므로(저채도 C≤0.024) 아래 대비 실측값이 유지된다. 크루 식별 원칙(①)
+     때문에 채도는 여전히 데이터(크루색)만 쓰고, 크롬은 온색이되 C≤0.024로 묶는다.
+     괄호 안은 흰 배경 대비 실측값. */
+  /* 본문 잉크 — 개편 전 near-black(0.16, 19.41)에서 **따뜻한 먹빛(0.23)** 으로 살짝 풀었다.
+     11.9:1로 AAA(7:1)를 크게 넘기며, 순수 검정의 딱딱함 대신 손글씨 같은 온기를 준다. */
+  --foreground: oklch(0.23 0.016 70); /* 11.9 */
+  --card-foreground: oklch(0.23 0.016 70);
+  --popover-foreground: oklch(0.23 0.016 70);
+  --primary: oklch(0.27 0.021 66);
+  --primary-foreground: oklch(0.985 0.004 86);
+  --secondary: oklch(0.965 0.009 84);
+  --secondary-foreground: oklch(0.27 0.021 66);
+  --muted: oklch(0.964 0.01 84);
+  /* 5.4 — L을 0.53→0.52로 아주 조금 낮춰(더 어둡게) 색조 회전 뒤에도 본문 대비 4.5:1(NFR-018)
+     여유를 지킨다. 어두워질수록 흰 배경 대비는 커진다. */
+  --muted-foreground: oklch(0.52 0.019 68);
+  --accent: oklch(0.948 0.014 82);
+  --accent-foreground: oklch(0.27 0.021 66);
+  /* 6.15 — 붉은 파괴/오류색은 채도=데이터 원칙의 예외라 색조를 온색으로 돌리지 않고 그대로 둔다.
+     기존 `oklch(0.577 0.245 27.325)`(4.76)보다 여유를 둔 값이다(`text-destructive` 본문용). */
   --destructive: oklch(0.52 0.21 27);
-  --border: oklch(0.9 0.007 258);
-  /* 3.37 — **기존 `oklch(0.88 0.009 258)`는 흰 배경 대비 1.43로 3:1(NFR-018
-     비텍스트) 미달이었다.** `border-input`이 Input·Textarea·Select·Checkbox·
-     RadioGroup·Tabs의 유일한 경계선이라(배경이 `bg-transparent`) 여기서 고쳤다
-     (10일차 접근성 QA 패스, Task 024). 다크는 이미 12.47로 여유가 있어 그대로
-     둔다 — `bg-input/*` 채움은 전부 `dark:` 접두만 쓰여 라이트에는 영향 없다. */
-  --input: oklch(0.64 0.009 258);
-  /* 7.43 — **기존 `oklch(0.708 0 0)`은 흰 배경 대비 2.59로 3:1 미달이었다.**
-     포커스 표시자는 WCAG 2.2(2.4.11)·NFR-020의 대상이라 개편에서 고쳤다.
-     크루 파랑(crew-9 `#007af5`)과 혼동되지 않도록 채도는 0.02로 묶고 명도로만
-     드러낸다. 다크는 배경이 뒤집히므로 아래에서 밝은 값으로 따로 준다. */
-  --ring: oklch(0.45 0.02 258);
-  /* 차트는 v0.1 화면에 없지만 shadcn 표준 토큰이라 잉크 스케일로 맞춰 둔다.
+  --border: oklch(0.9 0.013 84);
+  /* 3.4 — 비텍스트 경계 3:1(NFR-018) 대상. L=0.62로 기존 0.64보다 살짝 어둡게 잡아 색조 회전
+     뒤에도 3:1을 지킨다. `border-input`이 Input·Textarea·Select·Checkbox·RadioGroup·Tabs의
+     유일한 경계선이라(배경이 `bg-transparent`) 여기서 값을 준다(Task 024). */
+  --input: oklch(0.62 0.014 74);
+  /* 7.4 — 포커스 표시자(WCAG 2.2 §2.4.11·NFR-020). L=0.45 유지. 온색으로 돌리면 크루 파랑
+     (crew-9 `#007af5`)에서 오히려 더 멀어져 혼동이 준다 — 채도는 0.024로 묶고 명도로 드러낸다.
+     다크는 배경이 뒤집히므로 아래에서 밝은 값으로 따로 준다. */
+  --ring: oklch(0.45 0.024 72);
+  /* 차트는 v0.1 화면에 없지만 shadcn 표준 토큰이라 온색 잉크 스케일로 맞춰 둔다.
      차트가 생기면 크루색이 아니라 이 스케일을 쓴다 — 크루색은 크루 식별 전용이다. */
-  --chart-1: oklch(0.86 0.01 258);
-  --chart-2: oklch(0.7 0.014 258);
-  --chart-3: oklch(0.55 0.018 258);
-  --chart-4: oklch(0.4 0.02 258);
-  --chart-5: oklch(0.27 0.02 258);
+  --chart-1: oklch(0.86 0.012 84);
+  --chart-2: oklch(0.7 0.016 78);
+  --chart-3: oklch(0.55 0.02 72);
+  --chart-4: oklch(0.4 0.022 68);
+  --chart-5: oklch(0.27 0.021 66);
   /* 0.625rem → 0.5rem. 캘린더 셀·크루 칩·투표 행처럼 작고 촘촘한 요소가 화면의
      주역이라, 기본값의 둥근 모서리는 밀도를 흐린다. 파생 반경(`--radius-sm`~`4xl`)이
      전부 이 값의 배수라 여기 하나만 바꾸면 전체가 따라온다. */
   --radius: 0.5rem;
-  --sidebar: oklch(0.985 0.003 258);
-  --sidebar-foreground: oklch(0.16 0.014 258);
-  --sidebar-primary: oklch(0.24 0.022 258);
-  --sidebar-primary-foreground: oklch(0.985 0.003 258);
-  --sidebar-accent: oklch(0.95 0.008 258);
-  --sidebar-accent-foreground: oklch(0.24 0.022 258);
-  --sidebar-border: oklch(0.9 0.007 258);
-  --sidebar-ring: oklch(0.45 0.02 258);
+  --sidebar: oklch(0.985 0.007 86);
+  --sidebar-foreground: oklch(0.23 0.016 70);
+  --sidebar-primary: oklch(0.27 0.021 66);
+  --sidebar-primary-foreground: oklch(0.985 0.004 86);
+  --sidebar-accent: oklch(0.948 0.014 82);
+  --sidebar-accent-foreground: oklch(0.27 0.021 66);
+  --sidebar-border: oklch(0.9 0.013 84);
+  --sidebar-ring: oklch(0.45 0.024 72);
 
   /* 크루색 채움 위 글자색 — 라이트·다크 단일값(`@theme inline` 주석 참고). */
   --crew-text-ink: oklch(0.16 0.014 258);
@@ -242,86 +293,96 @@
 }
 
 /* OS 다크 감지 폴백 (mo_im 1일차 교차검증 — BOARD 지적사항 #1).
-   명시적 테마 토글(ThemeProvider)은 Task 011(DESIGN)로 이월됐다. 그때까지는
-   사용자가 아직 명시 선택을 하지 않은 기본 상태에서 OS 설정을 따라가도록
-   여기서 `.dark`와 동일한 뉴트럴 토큰 값을 미디어 쿼리로 다시 적용한다.
+   명시적 테마 토글(`ThemeProvider`, Task 011)이 이제 있다. 그 provider와 FOUC 방지
+   인라인 스크립트(`THEME_INIT_SCRIPT`)는 JS가 돌면 `<html>`에 항상 `.light` 또는 `.dark`를
+   박으므로, 이 미디어 폴백은 **그 스크립트가 아직 돌지 않은 no-JS 구간의 안전망**일 뿐이다.
+   그래서 셀렉터를 `:root:not(.light):not(.dark)`로 좁혔다 — 사용자가 "밝게"를 명시 선택하면
+   `.light`가 붙어 OS가 다크여도 이 블록이 매치되지 않고 위 `:root`의 라이트 토큰이 남는다
+   (이 좁힘이 없으면 명시 라이트가 OS 다크에 덮여 동작하지 않는다).
    `--crew-*`는 D-026에 따라 라이트·다크 단일값이라 재정의하지 않는다.
-   토큰 값은 아래 `.dark` 블록과 반드시 동기화 상태를 유지할 것 — 값을 고칠 때
-   두 곳을 함께 고친다. `.dark`가 이 블록보다 소스 순서상 뒤에 있어 향후
-   명시적 토글이 클래스를 붙이면 OS 설정과 무관하게 `.dark`가 우선한다. */
+   토큰 값은 아래 `.dark` 블록과 반드시 동기화 상태를 유지할 것 — 값을 고칠 때 두 곳을 함께 고친다. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light):not(.dark) {
+    color-scheme: dark;
+    /* 따뜻한 종이·잉크 개편: 다크도 색조를 온색으로 회전한다. **명도(L)와 채도(C)는 라이트에서
+       검증한 값 그대로 두고 색조(H)만 258→온색으로 돌린다** — 그래야 크루색의 다크 대비(카드 위
+       최저 3.22, 배경 위 최저 3.52)가 그대로 유지된다. `--background`는 무채 유지(크루 대비 기준),
+       `--destructive`는 붉은색 예외라 색조를 돌리지 않는다. */
     --background: oklch(0.145 0 0);
-    --card: oklch(0.2 0.01 258);
-    --popover: oklch(0.2 0.01 258);
-    --foreground: oklch(0.975 0.004 258);
-    --card-foreground: oklch(0.975 0.004 258);
-    --popover-foreground: oklch(0.975 0.004 258);
-    --primary: oklch(0.92 0.008 258);
-    --primary-foreground: oklch(0.2 0.01 258);
-    --secondary: oklch(0.265 0.012 258);
-    --secondary-foreground: oklch(0.975 0.004 258);
-    --muted: oklch(0.265 0.012 258);
-    --muted-foreground: oklch(0.715 0.014 258);
-    --accent: oklch(0.3 0.014 258);
-    --accent-foreground: oklch(0.975 0.004 258);
+    --card: oklch(0.2 0.01 74);
+    --popover: oklch(0.2 0.01 74);
+    --foreground: oklch(0.975 0.004 90);
+    --card-foreground: oklch(0.975 0.004 90);
+    --popover-foreground: oklch(0.975 0.004 90);
+    --primary: oklch(0.92 0.008 88);
+    --primary-foreground: oklch(0.2 0.01 74);
+    --secondary: oklch(0.265 0.012 76);
+    --secondary-foreground: oklch(0.975 0.004 90);
+    --muted: oklch(0.265 0.012 76);
+    --muted-foreground: oklch(0.715 0.014 82);
+    --accent: oklch(0.3 0.014 78);
+    --accent-foreground: oklch(0.975 0.004 90);
     --destructive: oklch(0.72 0.18 22);
-    --border: oklch(0.85 0.02 258 / 14%);
-    --input: oklch(0.85 0.02 258 / 20%);
-    --ring: oklch(0.72 0.025 258);
-    --chart-1: oklch(0.86 0.01 258);
-    --chart-2: oklch(0.72 0.014 258);
-    --chart-3: oklch(0.6 0.018 258);
-    --chart-4: oklch(0.45 0.02 258);
-    --chart-5: oklch(0.33 0.02 258);
-    --sidebar: oklch(0.2 0.01 258);
-    --sidebar-foreground: oklch(0.975 0.004 258);
-    --sidebar-primary: oklch(0.92 0.008 258);
-    --sidebar-primary-foreground: oklch(0.2 0.01 258);
-    --sidebar-accent: oklch(0.3 0.014 258);
-    --sidebar-accent-foreground: oklch(0.975 0.004 258);
-    --sidebar-border: oklch(0.85 0.02 258 / 14%);
-    --sidebar-ring: oklch(0.72 0.025 258);
+    --border: oklch(0.85 0.02 84 / 14%);
+    --input: oklch(0.85 0.02 84 / 20%);
+    --ring: oklch(0.72 0.025 80);
+    --chart-1: oklch(0.86 0.012 84);
+    --chart-2: oklch(0.72 0.016 80);
+    --chart-3: oklch(0.6 0.02 76);
+    --chart-4: oklch(0.45 0.022 70);
+    --chart-5: oklch(0.33 0.021 68);
+    --sidebar: oklch(0.2 0.01 74);
+    --sidebar-foreground: oklch(0.975 0.004 90);
+    --sidebar-primary: oklch(0.92 0.008 88);
+    --sidebar-primary-foreground: oklch(0.2 0.01 74);
+    --sidebar-accent: oklch(0.3 0.014 78);
+    --sidebar-accent-foreground: oklch(0.975 0.004 90);
+    --sidebar-border: oklch(0.85 0.02 84 / 14%);
+    --sidebar-ring: oklch(0.72 0.025 80);
   }
 }
 
 /* 위 `@media` 폴백과 **값이 완전히 같아야 한다.** 한쪽만 고치면 OS 다크와 명시
    토글이 서로 다른 화면을 그린다. `--background`는 라이트와 마찬가지로 무채·기존
    밝기를 유지한다 — 크루 12색의 다크 대비(최저 3.52)가 이 값 기준이다.
-   `--card`는 `oklch(0.2 0.01 258)`로 살짝 낮췄는데, 실측상 이 표면 위 크루색
-   최저 대비가 3.18(기존 0.205에서도 3.18)이라 3:1은 지키되 여유를 조금 벌었다. */
+   `--card`는 `oklch(0.2 0.01 74)`(따뜻한 종이·잉크 개편에서 색조만 258→74로 회전, L·C는
+   유지)로, 이 표면 위 크루색 최저 대비 3.22는 그대로다 — 색조 회전은 같은 L에서 휘도를
+   거의 바꾸지 않기 때문이다. */
 .dark {
+  color-scheme: dark;
+  /* 위 `@media` 폴백과 값이 완전히 같다(색조까지). 한쪽만 고치면 OS 다크와 명시 토글이 다른
+     화면을 그린다 — 값 변경 시 두 블록을 함께 고친다. */
   --background: oklch(0.145 0 0);
-  --card: oklch(0.2 0.01 258);
-  --popover: oklch(0.2 0.01 258);
-  --foreground: oklch(0.975 0.004 258);
-  --card-foreground: oklch(0.975 0.004 258);
-  --popover-foreground: oklch(0.975 0.004 258);
-  --primary: oklch(0.92 0.008 258);
-  --primary-foreground: oklch(0.2 0.01 258);
-  --secondary: oklch(0.265 0.012 258);
-  --secondary-foreground: oklch(0.975 0.004 258);
-  --muted: oklch(0.265 0.012 258);
-  --muted-foreground: oklch(0.715 0.014 258);
-  --accent: oklch(0.3 0.014 258);
-  --accent-foreground: oklch(0.975 0.004 258);
+  --card: oklch(0.2 0.01 74);
+  --popover: oklch(0.2 0.01 74);
+  --foreground: oklch(0.975 0.004 90);
+  --card-foreground: oklch(0.975 0.004 90);
+  --popover-foreground: oklch(0.975 0.004 90);
+  --primary: oklch(0.92 0.008 88);
+  --primary-foreground: oklch(0.2 0.01 74);
+  --secondary: oklch(0.265 0.012 76);
+  --secondary-foreground: oklch(0.975 0.004 90);
+  --muted: oklch(0.265 0.012 76);
+  --muted-foreground: oklch(0.715 0.014 82);
+  --accent: oklch(0.3 0.014 78);
+  --accent-foreground: oklch(0.975 0.004 90);
   --destructive: oklch(0.72 0.18 22);
-  --border: oklch(0.85 0.02 258 / 14%);
-  --input: oklch(0.85 0.02 258 / 20%);
-  --ring: oklch(0.72 0.025 258);
-  --chart-1: oklch(0.86 0.01 258);
-  --chart-2: oklch(0.72 0.014 258);
-  --chart-3: oklch(0.6 0.018 258);
-  --chart-4: oklch(0.45 0.02 258);
-  --chart-5: oklch(0.33 0.02 258);
-  --sidebar: oklch(0.2 0.01 258);
-  --sidebar-foreground: oklch(0.975 0.004 258);
-  --sidebar-primary: oklch(0.92 0.008 258);
-  --sidebar-primary-foreground: oklch(0.2 0.01 258);
-  --sidebar-accent: oklch(0.3 0.014 258);
-  --sidebar-accent-foreground: oklch(0.975 0.004 258);
-  --sidebar-border: oklch(0.85 0.02 258 / 14%);
-  --sidebar-ring: oklch(0.72 0.025 258);
+  --border: oklch(0.85 0.02 84 / 14%);
+  --input: oklch(0.85 0.02 84 / 20%);
+  --ring: oklch(0.72 0.025 80);
+  --chart-1: oklch(0.86 0.012 84);
+  --chart-2: oklch(0.72 0.016 80);
+  --chart-3: oklch(0.6 0.02 76);
+  --chart-4: oklch(0.45 0.022 70);
+  --chart-5: oklch(0.33 0.021 68);
+  --sidebar: oklch(0.2 0.01 74);
+  --sidebar-foreground: oklch(0.975 0.004 90);
+  --sidebar-primary: oklch(0.92 0.008 88);
+  --sidebar-primary-foreground: oklch(0.2 0.01 74);
+  --sidebar-accent: oklch(0.3 0.014 78);
+  --sidebar-accent-foreground: oklch(0.975 0.004 90);
+  --sidebar-border: oklch(0.85 0.02 84 / 14%);
+  --sidebar-ring: oklch(0.72 0.025 80);
 }
 
 @layer base {
