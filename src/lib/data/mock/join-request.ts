@@ -41,6 +41,22 @@ export async function listJoinRequestsForCrew(
   return store.joinRequests.filter((r) => r.crewId === crewId && (!status || r.status === status));
 }
 
+/**
+ * 신청자 본인 관점의 대기 중 신청 1건(FR-022 AC3 "신청 대기 중 · 철회" 버튼, Task 016B).
+ * `joinRequestId`를 클라이언트가 들고 있다가 넘기는 대신, 크루 id + 세션의 profileId만으로
+ * 서버가 직접 찾는다 — 다른 사람의 신청 id를 추측해 넘기는 경로 자체가 없다.
+ */
+export async function getPendingJoinRequestForRequester(
+  crewId: Id,
+  requesterId: Id,
+): Promise<JoinRequest | null> {
+  return (
+    store.joinRequests.find(
+      (r) => r.crewId === crewId && r.requesterId === requesterId && r.status === "pending",
+    ) ?? null
+  );
+}
+
 /** 가입 신청 승인·반려(FR-023). 이미 처리된 신청은 conflict. */
 export async function decideJoinRequest(
   id: Id,
@@ -54,5 +70,24 @@ export async function decideJoinRequest(
   }
   joinRequest.status = decision;
   joinRequest.decidedBy = decidedBy;
+  return ok(joinRequest);
+}
+
+/**
+ * 가입 신청 철회(FR-022 E4, Task 016B). 요청한 본인만 철회할 수 있다 — `requesterId`가
+ * 세션의 profileId와 일치하지 않으면 (다른 사람의 신청이거나 이미 없는 신청이거나) `not_found`로
+ * 뭉뚱그린다. "존재하지만 남의 것"과 "존재하지 않음"을 구분해 주지 않는 것은
+ * `handle-search.ts`의 R-012와 같은 이유 — 존재 여부 자체를 정보로 흘리지 않는다.
+ */
+export async function withdrawJoinRequest(
+  id: Id,
+  requesterId: Id,
+): Promise<DataResult<JoinRequest>> {
+  const joinRequest = store.joinRequests.find((r) => r.id === id && r.requesterId === requesterId);
+  if (!joinRequest) return err("not_found", `join request ${id} 를 찾을 수 없다.`);
+  if (joinRequest.status !== "pending") {
+    return err("conflict", `join request ${id} 는 이미 ${joinRequest.status} 상태다.`);
+  }
+  joinRequest.status = "withdrawn";
   return ok(joinRequest);
 }

@@ -19,14 +19,23 @@ export interface ListMeetupsQuery {
   /** 캘린더 월간 뷰(FR-061)의 조회 구간 — 양끝 포함, ISO date 문자열 비교. */
   from: string;
   to: string;
+  /**
+   * `true`면 취소된(`status === "cancelled"`) Meetup도 함께 반환한다. 기본값 `false`는
+   * 021A 때부터의 기존 동작(월 격자 바는 취소분을 아예 숨긴다)을 그대로 유지한다 — 이 옵션을
+   * 추가한 이유는 Task 021B의 `DayDetailPanel`이 FR-063 E3("취소된 Meetup → 취소 배지와
+   * 함께 표시")를 만족하려면 같은 날짜의 취소 건도 알아야 하기 때문이다. 월 격자 바는 여전히
+   * 이 옵션 없이(기본값) 호출해 동작이 바뀌지 않는다 — `MonthCalendarContainer`가 상세 목록용
+   * 조회 한 번만 `includeCancelled: true`로 부른다.
+   */
+  includeCancelled?: boolean;
 }
 
-/** 캘린더 월간 뷰 + 크루 필터(FR-061). 취소된 Meetup은 제외한다. */
+/** 캘린더 월간 뷰 + 크루 필터(FR-061). 기본은 취소된 Meetup을 제외한다({@link ListMeetupsQuery.includeCancelled}). */
 export async function listMeetupsByCrews(opts: ListMeetupsQuery): Promise<Meetup[]> {
   const crewIdSet = new Set(opts.crewIds);
   return store.meetups.filter(
     (m) =>
-      m.status === "confirmed" &&
+      (opts.includeCancelled || m.status === "confirmed") &&
       crewIdSet.has(m.crewId) &&
       m.date >= opts.from &&
       m.date <= opts.to,

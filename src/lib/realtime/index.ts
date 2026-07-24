@@ -15,9 +15,15 @@ import type { SubscribeToRoom } from "./types";
 
 export const subscribeToRoom: SubscribeToRoom = subscribeToRoomViaMock;
 
-// Mock 전용 테스트/데모 훅 — `/sample` 토글이나 Mock Server Action이 "이 방에
-// 이런 일이 일어났다"를 시뮬레이션할 때 쓴다. 배럴을 통해서만 노출한다(D-030
-// ②) — 소비자가 `@/lib/realtime/mock`을 직접 import하는 길은 없다.
+// Mock 전용 테스트/데모 훅 — `/sample` 토글이나 클라이언트 컴포넌트/컨테이너가
+// "이 방에 이런 일이 일어났다"를 시뮬레이션할 때 쓴다. 배럴을 통해서만 노출한다
+// (D-030 ②) — 소비자가 `@/lib/realtime/mock`을 직접 import하는 길은 없다.
+// **`publishMockEvent`/`publishMockError`는 반드시 브라우저 쪽(클라이언트 컴포넌트·
+// 컨테이너)에서 호출한다 — `"use server"` Server Action 안에서 직접 부르지 않는다**
+// (I-042: 서버 번들에서 이 모듈을 평가하면 `mock.ts`의 `rooms` Map이 클라이언트 쪽과
+// 분리된 별개 인스턴스가 되어, 구독자 0명인 곳에 발행돼 조용히 사라진다 — `tsc`·`lint`
+// 어느 쪽도 잡지 못하는 런타임 전용 결함이었다). 자세한 경위·올바른 패턴은
+// `mock.ts`의 모듈 docstring과 `docs/ISSUES.md` I-042 참고.
 // **알려진 이월 사항**: 실데이터(Broadcast)로 전환하면 이 세 함수는 더 이상
 // 실제 구독에 영향을 주지 않는다(발행할 Mock 상태 자체가 없어지므로). 그
 // 시점에 `/sample` 데모 코드가 이 함수들을 계속 참조하고 있다면 함께

@@ -1,4 +1,9 @@
+
+import { crewColorIndex } from "@/lib/rules/crew-color-hash";
+import { createCrewMembershipStatus } from "@/lib/rules/crew-membership-transition";
 import type {
+  Board,
+  ChatRoom,
   Crew,
   CrewMembership,
   CrewMembershipRole,
@@ -14,10 +19,12 @@ import { generateId, store } from "./fixtures";
  * Crew·CrewMembership 데이터 접근 (FR-010~012·014·020(초대 발급은 invitation.ts)·
  * 022~024·026·028).
  *
- * `colorKey`(캘린더 팔레트 인덱스)는 `hash(crewId) mod 12` 판정 결과다 — 그 판정 함수는
- * `lib/rules`(CREW 담당) 몫이므로, 이 레이어는 이미 계산된 값을 받아 저장만 한다.
- * 마찬가지로 크루원 강퇴·임명 같은 조작의 **허용 여부**는 `lib/rules`의 권한 판정이
- * 먼저 걸러낸다 — 이 레이어에 도달했다는 것 자체가 이미 그 판정을 통과했다는 전제다.
+ * `colorKey`(캘린더 팔레트 인덱스)는 `hash(crewId) mod 12`(D-006) 판정 결과다 — 그 판정
+ * 함수(`crewColorIndex`, `lib/rules/crew-color-hash.ts`)는 크루 id가 있어야 계산할 수 있는데,
+ * id는 이 파일의 `generateId`가 만들므로 **`createCrew` 내부에서** id를 만든 직후 곧바로
+ * 계산한다(D-016 — 개설 폼은 색을 묻지 않는다, 호출자가 값을 들고 올 수 없다). 마찬가지로
+ * 크루원 강퇴·임명 같은 조작의 **허용 여부**는 `lib/rules`의 권한 판정이 먼저 걸러낸다 — 이
+ * 레이어에 도달했다는 것 자체가 이미 그 판정을 통과했다는 전제다.
  */
 
 export interface ListCrewsQuery {
@@ -48,19 +55,24 @@ export interface CreateCrewInput {
   category: string;
   visibility: CrewVisibility;
   ownerId: Id;
-  /** `lib/rules`의 색 배정 함수가 계산한 값(D-006). */
-  colorKey: number;
 }
 
-/** 크루 개설(FR-010). 오너 본인의 owner 멤버십도 함께 생성한다. */
+/**
+ * 크루 개설(FR-010 AC1·AC2, D-008, D-016). 한 번의 호출로 FR-010 정상 흐름 ④를 전부 만족한다:
+ * 크루 생성 + 오너 `active`/`owner` 멤버십 + 게시판·채팅방 자동 생성 + 색상 자동 배정.
+ * 넷을 분리해 호출부(Server Action)가 순서대로 조립하게 두면 하나를 빠뜨렸을 때(예: 채팅방
+ * 생성만 잊음) AC2("게시판 탭과 채팅 탭이 이미 존재")가 조용히 깨진다 — 그래서 이 함수가
+ * 원자적으로 묶는다.
+ */
 export async function createCrew(input: CreateCrewInput): Promise<Crew> {
+  const crewId = generateId("crew");
   const crew: Crew = {
-    id: generateId("crew"),
+    id: crewId,
     name: input.name,
     description: input.description,
     category: input.category,
     visibility: input.visibility,
-    colorKey: input.colorKey,
+    colorKey: crewColorIndex(crewId),
     ownerId: input.ownerId,
     status: "active",
   };
@@ -73,6 +85,12 @@ export async function createCrew(input: CreateCrewInput): Promise<Crew> {
     joinedAt: new Date().toISOString(),
     removedReason: null,
   });
+
+  const board: Board = { id: generateId("board"), crewId: crew.id };
+  store.boards.push(board);
+  const chatRoom: ChatRoom = { id: generateId("room"), crewId: crew.id };
+  store.chatRooms.push(chatRoom);
+
   return crew;
 }
 
@@ -158,5 +176,64 @@ export async function updateCrewMembershipStatus(
   if (!membership) return err("not_found", `crew ${crewId} 의 멤버십(${profileId})을 찾을 수 없다.`);
   membership.status = status;
   membership.removedReason = status === "removed" ? removedReason : null;
+  return ok(membership);
+}
+
+/**
+ * 초대(FR-020, Task 017A)·가입 신청(FR-022) 시작점 — 둘 다 2.4절 다이어그램의 `[*] --> invited`/
+ * `[*] --> requested`다. `(crewId, profileId)`가 PK라 이미 종결 상태(declined·rejected·left)로
+ * 남아 있는 예전 멤버십 행이 있으면 **새 행을 추가하지 않고 그 행을 재사용**한다 — 중복 행을
+ * 만들면 `getCrewMembership`의 `.find`가 어느 쪽을 반환할지 보장할 수 없어진다. `removed`
+ * (강퇴) 상태는 호출자가 먼저 `evaluateJoinRequestEligibility`(`lib/rules`)로 걸러야 한다 —
+ * 이 함수 자신은 상태값을 그대로 받아 쓸 뿐 재신청 차단(FR-022 E3)을 판정하지 않는다.
+ */
+export async function initiateCrewMembership(
+  crewId: Id,
+  profileId: Id,
+  origin: "invite" | "request",
+): Promise<CrewMembership> {
+  const status = createCrewMembershipStatus(origin);
+  const existing = store.crewMemberships.find(
+    (m) => m.crewId === crewId && m.profileId === profileId,
+  );
+  if (existing) {
+    existing.role = "member";
+    existing.status = status;
+    existing.joinedAt = new Date().toISOString();
+    existing.removedReason = null;
+    return existing;
+  }
+
+  const membership: CrewMembership = {
+    crewId,
+    profileId,
+    role: "member",
+    status,
+    joinedAt: new Date().toISOString(),
+    removedReason: null,
+  };
+  store.crewMemberships.push(membership);
+  return membership;
+}
+
+/**
+ * 가입 신청 철회(FR-022 E4)의 멤버십 쪽 반영. 2.4절 다이어그램에는 신청자 자신의 철회
+ * 전이가 없다(오너/임원의 승인·반려만 정의됨) — 재신청 가능 여부(`removed`만 차단)에는
+ * 차이가 없으므로 실용적으로 `rejected`(반려)와 같은 종착 상태로 합류시킨다. "누가 왜
+ * 끝냈는지"의 실제 기록은 `JoinRequest.status`(`pending`→`withdrawn`, `join-request.ts`)가
+ * 이미 구분해 담당한다 — 이 근사가 맞는지는 `docs/ISSUES.md` I-039에 남겼다.
+ */
+export async function withdrawPendingCrewMembership(
+  crewId: Id,
+  profileId: Id,
+): Promise<DataResult<CrewMembership>> {
+  const membership = store.crewMemberships.find(
+    (m) => m.crewId === crewId && m.profileId === profileId,
+  );
+  if (!membership) return err("not_found", `crew ${crewId} 의 멤버십(${profileId})을 찾을 수 없다.`);
+  if (membership.status !== "requested") {
+    return err("conflict", `crew ${crewId} 의 멤버십(${profileId})은 대기 중 신청 상태가 아니다.`);
+  }
+  membership.status = "rejected";
   return ok(membership);
 }

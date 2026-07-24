@@ -3,6 +3,8 @@ import { authSection } from "@/components/sample/sections/auth";
 import { boardSection } from "@/components/sample/sections/board";
 import { calendarSection } from "@/components/sample/sections/calendar";
 import { certaintySection } from "@/components/sample/sections/certainty";
+import { chatSection } from "@/components/sample/sections/chat";
+import { crewsSection } from "@/components/sample/sections/crews";
 import { errorsSection } from "@/components/sample/sections/errors";
 import { formsSection } from "@/components/sample/sections/forms";
 import { foundationSection } from "@/components/sample/sections/foundation";
@@ -34,5 +36,7 @@ export const SHOWCASE_SECTIONS: ShowcaseSection[] = [
   calendarSection,
   authSection,
   boardSection,
+  chatSection,
   accountSection,
+  crewsSection,
 ];

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { formatDayLabelKo } from "@/components/calendar/date-grid";
+import { DayDetailPanel } from "@/components/calendar/DayDetailPanel";
 import { MeetupBar } from "@/components/calendar/MeetupBar";
 import { buttonVariants } from "@/components/ui/button";
 import { strings, t } from "@/lib/strings";
@@ -50,9 +51,11 @@ function cellDescId(iso: string): string {
  *
  * **키보드 셀 내비(NFR-020)**: roving tabindex 패턴이다 — 42칸 중 정확히 하나만
  * `tabIndex=0`이고 나머지는 `-1`이다. 방향키(←→↑↓)·Home·End로 `activeIso`를 옮기고 실제
- * DOM 포커스도 함께 옮긴다. `Enter`/`Space`로 상세 패널을 여는 동작은 `DayDetailPanel`
- * (Task 021B)이 붙는 지점이다 — 이번 회차는 격자·포커스 이동까지만 만든다(D-012, 조회 전용
- * 원칙과도 맞다 — 아직은 클릭해도 아무 데이터도 만들지 않는다).
+ * DOM 포커스도 함께 옮긴다. `Enter`/`Space`(WAI-ARIA APG grid 패턴의 셀 활성화 키)와 클릭은
+ * `DayDetailPanel`(Task 021B, FR-063)을 연다 — 021A가 남겨 둔 지점을 이번 회차에 채웠다.
+ * 패널이 여는 데이터(`day.meetups`)는 이미 이 컴포넌트가 props로 받아 둔 값이라 클릭 시
+ * 새로 조회하지 않는다(D-012 조회 전용 원칙 그대로 — 클릭은 이미 있는 데이터를 보여줄
+ * 뿐 아무것도 만들지 않는다).
  *
  * **360px 무-가로스크롤(NFR-005·026)**: 셀 폭에 고정 px를 쓰지 않는다 — `grid-cols-7` +
  * `min-w-0`으로 셀이 부모 폭을 따라 줄어들게 하고, 바 텍스트는 `truncate`로 말줄임한다.
@@ -70,6 +73,13 @@ export function MonthCalendar({
   const initialFocusIso =
     days.find((d) => d.isToday)?.iso ?? days.find((d) => d.isCurrentMonth)?.iso ?? days[0]?.iso;
   const [activeIso, setActiveIso] = useState(initialFocusIso);
+  /** 열려 있는 `DayDetailPanel`의 날짜(`null`이면 닫힘) — Task 021B, FR-063. */
+  const [openIso, setOpenIso] = useState<string | null>(null);
+  const openDay = days.find((d) => d.iso === openIso);
+
+  function openDetailPanel(iso: string) {
+    setOpenIso(iso);
+  }
 
   function focusIndex(index: number) {
     const clamped = Math.min(Math.max(index, 0), days.length - 1);
@@ -110,6 +120,13 @@ export function MonthCalendar({
       case "End":
         event.preventDefault();
         focusIndex(rowStart + 6);
+        return;
+      case "Enter":
+      case " ":
+        // Space는 기본 동작이 페이지 스크롤이라 반드시 막는다(WAI-ARIA APG grid 패턴 — 셀
+        // 활성화 키는 Enter/Space 둘 다다).
+        event.preventDefault();
+        openDetailPanel(iso);
         return;
       default:
         return;
@@ -173,12 +190,11 @@ export function MonthCalendar({
                     date: formatDayLabelKo(day.iso),
                     count: day.bars.length + day.overflowCount,
                   })}
-                  aria-describedby={
-                    day.allMeetupSummaries.length > 0 ? cellDescId(day.iso) : undefined
-                  }
+                  aria-describedby={day.meetups.length > 0 ? cellDescId(day.iso) : undefined}
                   aria-current={day.isToday ? "date" : undefined}
                   onFocus={() => setActiveIso(day.iso)}
                   onKeyDown={(event) => handleKeyDown(event, day.iso)}
+                  onClick={() => openDetailPanel(day.iso)}
                   className={cn(
                     "flex min-h-16 min-w-0 flex-col gap-0.5 rounded-md border border-transparent p-1 text-left outline-none @sm:min-h-20",
                     "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50",
@@ -203,10 +219,15 @@ export function MonthCalendar({
                       </span>
                     )}
                   </div>
-                  {day.allMeetupSummaries.length > 0 && (
+                  {day.meetups.length > 0 && (
                     <span id={cellDescId(day.iso)} className="sr-only">
-                      {day.allMeetupSummaries
-                        .map((m) => t((s) => s.calendar.month.barAriaLabel, m))
+                      {day.meetups
+                        .map((m) =>
+                          t((s) => s.calendar.month.barAriaLabel, {
+                            crewName: m.crewName,
+                            title: m.title,
+                          }),
+                        )
                         .join(", ")}
                     </span>
                   )}
@@ -216,6 +237,15 @@ export function MonthCalendar({
           ))}
         </div>
       </div>
+
+      <DayDetailPanel
+        open={openIso !== null}
+        onOpenChange={(open) => {
+          if (!open) setOpenIso(null);
+        }}
+        dateLabel={openIso ? formatDayLabelKo(openIso) : ""}
+        meetups={openDay?.meetups ?? []}
+      />
     </div>
   );
 }

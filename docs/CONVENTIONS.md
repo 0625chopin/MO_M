@@ -167,7 +167,31 @@ src/
      - **허용, 사실 필수**: `(app)/` 아래 컨테이너가 `AuthSession` 유니온이 아니라 좁혀진 `authenticated` 타입을 요구하는 경우(예: `AccountSettingsContainer`·`MonthCalendarContainer`가 `session.profileId`를 바로 쓴다), TypeScript는 레이아웃의 보장을 정적으로 모르므로 **타입 내로잉용 재조회**가 필요하다. 이때 쓰는 게 `src/components/shell/auth-session.ts`의 **`assertAuthenticatedSession(session)`**(`asserts` 타입 서술어)이다 — 내부에서 실패하면 `redirect`가 아니라 `throw`한다(도달하면 사용자 오류가 아니라 레이아웃 가드 자체가 깨졌다는 뜻, D-030 ③). `as` 단언을 쓰지 않는 이유도 같다 — 단언은 이 불변식이 깨져도 조용히 통과시킨다.
      - **`(app)` 밖(예: 크루 게시판처럼 D-007상 guest도 유효한 역할인 라우트)**: 이 헬퍼를 쓰지 않는다. 대신 `src/components/board/resolve-board-viewer.ts`의 패턴 — guest를 오류가 아니라 `role: "guest"`인 정상 값으로 반환하고, `lib/rules/permission.ts`의 `checkPermission` 매트릭스가 거부 여부를 판정하게 한다. 두 패턴은 **경쟁하는 두 방식이 아니라 서로 다른 문제**(guest가 애초에 불가능한 곳 vs guest가 유효한 역할인 곳)를 푼다 — 섞어 쓰지 않는다.
      - **fail-open 금지**: 인증되지 않은/판정 불가 상태를 "실존 Mock 사용자로 대체"해 조용히 통과시키지 않는다(예전 `MonthCalendarContainer`의 `MOCK_FALLBACK_PROFILE_ID`가 이 실수였다 — 6일차 CORE 재검증 E-2로 제거) — 안전한 실패는 항상 거부(guest 역할 낙하 또는 `assertAuthenticatedSession`의 `throw`) 쪽이어야 한다.
-   - **`(app)`은 인증 게이트이지 크루원 게이트가 아니다**(6일차, 팀장 판정 E-3 — I-035). `(app)/layout.tsx`가 보장하는 불변식은 "로그인했다"까지다 — "그 크루의 멤버다"는 별개 판정이고 이 레이아웃이 대신해 주지 않는다. D-007이 크루 게시판·채팅·멤버 목록·캘린더를 크루원 전용으로 규정하므로, `(app)/crews/[crewId]/*`를 만들 때 "`(app)` 안이니 안전하다"고 착각하지 않는다 — 크루원 여부는 `resolveBoardViewer`처럼 호출부가 별도로 판정해야 하며(Task 016B·017A에서 `[crewId]` 세그먼트 레벨 게이트로 정리 예정, I-035 참고), 그 판정이 없는 컨테이너는 라우트 레벨에서 아무나 도달할 수 있다.
+   - **`(app)`은 인증 게이트이지 크루원 게이트가 아니다**(6일차, 팀장 판정 E-3 — I-035). `(app)/layout.tsx`가 보장하는 불변식은 "로그인했다"까지다 — "그 크루의 멤버다"는 별개 판정이고 이 레이아웃이 대신해 주지 않는다. D-007이 크루 게시판·채팅·멤버 목록·캘린더를 크루원 전용으로 규정한다.
+     - **크루원 게이트는 `src/app/(app)/crews/[crewId]/layout.tsx`가 맡는다**(7일차, **D-039** — I-035 해소). 이 동적 세그먼트 레이아웃 한 곳이 `getCrewMembership`+`isActiveMembership`로 "활성 크루원인가"만 판정해 `board`·`chat`·`members`·`settings` 전체에 적용한다 — 비멤버는 `cause: { code: "forbidden" }`를 던져 전역 `RouteErrorBoundary(kind="forbidden")`로 떨어진다. 판정은 **"크루원인가" 한 가지뿐**이다 — `board:read`처럼 액션별 세밀한 매트릭스 조건(관리자 열람 등)까지 이 레이아웃이 흉내 내지 않는다(지금 `AuthSession`에 `system_admin`을 표현할 필드 자체가 없어 이 근사가 안전하다).
+     - **`resolveBoardViewer` + `BoardListContainer`의 컨테이너 레벨 방어(`board:read`)는 제거하지 않았다.** 레이아웃이 이미 "크루원인가"를 걸렀어도, 그 컨테이너는 `role`(member/staff/owner 세분)을 계산해 `post:create`(글쓰기 버튼 노출) 같은 **다른** 판정에 그대로 재사용한다 — "같은 판정을 같은 방식(리다이렉트)으로 반복하는 것"(위 165행 금지 규칙)과는 다른 경우다. 새 하위 화면(채팅·멤버 관리 등)도 이 패턴을 따른다: **라우트 레벨은 이 레이아웃이, 액션별 세밀한 판정은 각 컨테이너·Server Action이** 계속 책임진다. 근거 전문은 `docs/prioritization-and-risks.md` D-039 참고.
+     - **`(app)/crews/new`는 이 레이아웃 밖이다** — `[crewId]`의 형제 세그먼트라 적용되지 않고(Next.js 동적 세그먼트 레이아웃은 형제에 적용 안 됨), 크루 개설 시점엔 "그 크루의 멤버"라는 개념 자체가 아직 없어 걸리면 안 된다.
+
+## Server Action 폼 상태 관리
+
+폼이 Server Action 결과(성공·오류·pending)를 화면에 반영하는 방법은 **성공했을 때 이 페이지에
+남아 있는가**로 가른다(7일차, Task 020A 교차검증에서 DESIGN이 정리 제안 → 팀장 승인).
+
+- **성공 시 다른 곳으로 리다이렉트하는 폼**(예: `LoginForm`·`SignupForm`) → `useActionState`.
+  성공 후에는 이 컴포넌트가 더 이상 화면에 없으므로 "성공하면 로컬 상태를 정리한다" 같은
+  후처리가 필요 없다.
+- **성공 후 같은 화면에 남아 입력만 비우거나 목록을 갱신하는 폼**(예: `Composer`, FR-051) →
+  `useTransition` + 수동 로컬 상태(`useState`로 값·에러를 직접 관리하고, 액션 호출·결과 처리를
+  `startTransition`의 비동기 콜백 안에서 한다). **이유**: "성공하면 입력창을 비운다"를
+  `useActionState`의 반환 `state`를 지켜보는 `useEffect`로 구현하면
+  `react-hooks/set-state-in-effect` 린트 에러가 난다 — effect 안에서 동기적으로 setState하는
+  패턴은 React가 명시적으로 비권장한다(공식 안내: "Subscribe for updates ... calling setState in
+  a callback function when external state changes"). 전송 결과를 아는 시점이 이미 이벤트
+  핸들러(폼 `action`)의 비동기 콜백 안이므로, 그 자리에서 바로 처리하면 이 문제가 생기지 않는다.
+  실제 코드는 `src/components/chat/Composer.tsx` 참고.
+
+이 팀이 반복해 지적받은 것은 두 방식 중 어느 쪽이 맞는지가 아니라 **기준이 문서화돼 있지
+않았다는 점**이다 — 다음에 폼을 만들 때는 위 두 갈래 중 어디 해당하는지만 먼저 정하면 된다.
 
 ## `/sample` 4상태 규칙
 

@@ -1,6 +1,11 @@
 import type { Id } from "./common.types";
 
-export type JoinRequestStatus = "pending" | "approved" | "rejected";
+/**
+ * `withdrawn`은 Task 016B(FR-022 E4 "신청자가 대기 중 철회 가능")에서 추가했다 — 2.4절
+ * 멤버십 상태 다이어그램에는 신청자 자신의 철회 전이가 없어(오너/임원의 승인·반려만 정의됨),
+ * 이 값이 없으면 철회와 반려를 구분할 방법이 없었다. `docs/ISSUES.md` I-039 참고.
+ */
+export type JoinRequestStatus = "pending" | "approved" | "rejected" | "withdrawn";
 
 export interface JoinRequest {
   id: Id;

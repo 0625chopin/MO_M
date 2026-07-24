@@ -132,3 +132,36 @@ export function formatDayLabelKo(iso: ISODateString): string {
     timeZone: "UTC",
   }).format(date);
 }
+
+/**
+ * 홈 대시보드 캘린더 요약(Task 021B, PRD "홈 대시보드 캘린더 요약")에 쓰는 짧은 날짜 문구
+ * (예: "8월 14일(금)") — `formatDayLabelKo`의 전체 문구("8월 14일 금요일")보다 좁은 폭에
+ * 맞춘다. 별도 `Intl.DateTimeFormat` 호출 없이 `formatDayLabelKo`가 이미 계산한 요일을
+ * 재사용한다 — 요일 계산 로직을 두 곳에 두지 않는다.
+ */
+export function formatShortDayLabelKo(iso: ISODateString): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const weekdayShort = new Intl.DateTimeFormat("ko-KR", {
+    weekday: "short",
+    timeZone: "UTC",
+  }).format(date);
+  return `${m}월 ${d}일(${weekdayShort})`;
+}
+
+/**
+ * `Meetup.startTime`("HH:MM" 24시간제, `generate-meetups.ts`의 `START_TIMES` 시드 형식)을
+ * "오전/오후 h:mm"로 바꾼다. 타임존 변환이 필요 없는 순수 문자열 가공이라(시각 자체가 이미
+ * 크루 로컬 표기) `Intl.DateTimeFormat`을 쓰지 않고 직접 계산한다 — `poll-timezone.ts`가
+ * 실제 시각 계산에 `Intl`을 쓰는 것과는 다른 종류의 문제(여기는 타임존 변환이 아니라 표기
+ * 변환뿐)다. `null`(시각 미정)은 그대로 `null`을 돌려준다 — 호출부가 "시각 미정" 문구를 낸다.
+ */
+export function formatStartTimeKo(startTime: string | null): string | null {
+  if (!startTime) return null;
+  const [hourStr, minuteStr] = startTime.split(":");
+  const hour = Number(hourStr);
+  const minute = Number(minuteStr);
+  const period = hour < 12 ? "오전" : "오후";
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${period} ${hour12}:${String(minute).padStart(2, "0")}`;
+}
