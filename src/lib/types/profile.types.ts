@@ -19,6 +19,13 @@ export interface Profile {
   searchOptOut: boolean;
   /** 탈퇴 익명화 시각. 탈퇴 전에는 null(D-010 — 삭제 로직 자체는 v0.2 대상이나 타입은 지금 확정한다). */
   anonymizedAt: ISODateTimeString | null;
+  /**
+   * 마지막 핸들 변경 시각 — FR-004 AC1(30일 1회 제한, `lib/rules/handle-validation.ts`의
+   * `canChangeHandle`)의 근거 필드. 가입 시 최초 설정은 "변경"이 아니므로 `createProfile`이
+   * 항상 `null`로 채운다(Task 015B). 계정 설정 화면에서 실제로 핸들을 바꾼 순간에만
+   * `changeProfileHandle`이 이 값을 갱신한다.
+   */
+  handleChangedAt: ISODateTimeString | null;
 }
 
 /**

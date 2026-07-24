@@ -13,7 +13,13 @@ import type { AuthSession } from "./auth-session";
  * 같은 `AuthSession` 유니온으로 매핑). 호출부(레이아웃·페이지)와 반환 타입은 그대로 두고
  * "데이터 조회 부분만 교체"하는 것이 CLAUDE.md Mock First 원칙의 실제 적용 지점이다.
  *
- * 로그인 폼이 아직 없어(Task 030) 정상 경로로는 항상 `guest`를 반환한다. QA가 인증 상태 화면을
+ * **Task 015A부터는 정상 경로로도 `authenticated`가 나올 수 있다** — 이 함수 자신은 여전히
+ * 쿠키를 "읽기만" 하지만, 이제 그 쿠키를 실제로 "쓰는" 코드가 있다: 회원가입(`lib/actions/signup.ts`
+ * 의 `signupAction`)·로그인(`lib/actions/login.ts`의 `loginAction`)·온보딩 완료
+ * (`lib/actions/complete-onboarding.ts`의 `completeOnboardingAction`) 세 Server Action이
+ * `set-mock-session-cookie.ts`의 `setMockSessionCookie`/`patchMockSessionCookie`를 통해서만
+ * 이 쿠키를 만든다(쓰기 쪽 스키마의 단일 소스는 그 파일). 그 세 액션을 거치지 않은 방문자
+ * (직접 URL로 들어온 첫 방문자 등)는 여전히 `guest`다. QA가 액션 없이 인증 상태 화면을
  * 미리 확인하려면 브라우저 쿠키에 `mo_im_mock_session`을
  * `{"status":"authenticated","profileId":"profile-1","displayName":"...","hasCompletedOnboarding":true,"unreadNotificationCount":0}`
  * 형태의 JSON 문자열로 수동 설정한다(제품 기능 아님, 개발 편의 훅). `profileId`를 생략하면

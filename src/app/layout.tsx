@@ -2,6 +2,7 @@ import { Geist_Mono, Noto_Sans_KR } from "next/font/google";
 
 import { AppShell } from "@/components/shell/AppShell";
 import { getAuthSession } from "@/components/shell/get-auth-session";
+import { Toaster } from "@/components/ui/toast";
 import { strings } from "@/lib/strings";
 
 import type { Metadata } from "next";
@@ -79,6 +80,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <AppShell session={session}>{children}</AppShell>
+        <Toaster />
       </body>
     </html>
   );

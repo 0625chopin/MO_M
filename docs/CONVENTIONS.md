@@ -27,8 +27,18 @@ src/
                              #   3일차 Task 011(DESIGN)이 최소 골격을, 디자인 개편(D-038)이
                              #   Task 012 구조로 확장했다 — 카테고리 섹션 + 앵커 내비 +
                              #   폭 토글(360/768/1280/전체) 프리뷰 프레임. 섹션은 기반(색·조판)·
-                             #   확정성 스케일·앱 셸·원자 컴포넌트 넷이다.
-    <route-segment>/        # [향후] 예: crews/, calendar/ — FR 단위로 팀원이 생성
+                             #   확정성 스케일·앱 셸·원자 컴포넌트 넷이다. `page.tsx` 자체에는
+                             #   섹션·항목 데이터가 없다 — 4일차 Task 012(DESIGN)가
+                             #   `src/components/sample/registry.ts`로 등록 인터페이스를
+                             #   확정해, 다른 팀원이 이 파일을 고치지 않고 자기 섹션을 등록한다.
+    (app)/                  # [완료] 6일차, D-030 ④ 인증 경계(I-025 해소). 라우트 그룹이라
+                             #   URL에 영향 없음 — `(app)/calendar/`는 여전히 `/calendar`다.
+                             #   `layout.tsx` 하나가 이 아래 전체(로그인 필요한 실제 앱 콘텐츠:
+                             #   home·crews·calendar·notifications·invitations·meetups·
+                             #   settings)의 인증 가드를 맡는다. "인증 경계는 레이아웃에서
+                             #   처리" 절 참고 — 게스트 전용 진입 페이지(랜딩·login·signup·
+                             #   onboarding)는 이 그룹 밖에 남는다.
+      <route-segment>/        # [향후] 예: crews/, calendar/ — FR 단위로 팀원이 생성
       page.tsx
       layout.tsx
       loading.tsx
@@ -51,12 +61,20 @@ src/
                              #   내비 항목 순수 함수)도 여기 있다 — `lib/data`·`lib/rules`
                              #   어디에도 지정 위치가 없어 부득이 이곳에 뒀다(I-026 참고, 실 인증
                              #   연동 시 이관 검토 대상).
-    sample/                 # [완료] 3일차 Task 011(DESIGN) + 디자인 개편(D-038). `/sample` 전용
-                             #   쇼케이스 인프라 — `StatePreview`(기본·로딩·빈·오류 토글, shadcn
-                             #   `Tabs` 기반), `PreviewFrame`(`position: fixed`/`sticky` 요소를
-                             #   미리보기 상자 안에 가두는 컨테이너 + 폭 토글). 제품 도메인
-                             #   컴포넌트가 아니라 개발 도구라 `<domain>/` 규칙(아래) 대신 여기
-                             #   별도 표기한다.
+    sample/                 # [완료] 3일차 Task 011(DESIGN) + 디자인 개편(D-038) + 4일차
+                             #   Task 012(DESIGN). `/sample` 전용 쇼케이스 인프라 —
+                             #   `StatePreview`(기본·로딩·빈·오류 토글, shadcn `Tabs` 기반),
+                             #   `PreviewFrame`(`position: fixed`/`sticky` 요소를 미리보기
+                             #   상자 안에 가두는 컨테이너 + 폭 토글), `showcase-types.ts`
+                             #   (`ShowcaseSection`·`ShowcaseItem`·`defineSection` — 등록
+                             #   인터페이스), `registry.ts`(팀원별 섹션을 조립하는 단일
+                             #   진입점), `ShowcaseSectionBlock.tsx`(섹션 렌더러),
+                             #   `sections/`(카테고리별 데이터 — `foundation`·`certainty`·
+                             #   `shell`·`primitives`). 다른 팀원이 자기 섹션을 등록하는
+                             #   방법은 `src/components/sample/README.md` 참고 — `page.tsx`를
+                             #   고치지 않고 `sections/`에 파일을 추가하고 `registry.ts`에
+                             #   한 줄만 더한다. 제품 도메인 컴포넌트가 아니라 개발 도구라
+                             #   `<domain>/` 규칙(아래) 대신 여기 별도 표기한다.
     <domain>/                # [향후] 도메인별 컴포넌트 (예: crews/, polls/, chat/, calendar/)
       <Name>Container.tsx     # 컨테이너: 데이터 조회·구독 소유 (D-030 ①)
       <Name>.tsx               # 표현: props만 받는 순수 렌더 (D-030 ①)
@@ -138,7 +156,18 @@ src/
 1. **표현/컨테이너 분리** → `components/<domain>/<Name>.tsx`(표현) / `<Name>Container.tsx`(컨테이너) 명명 규약 + ESLint가 표현 컴포넌트의 `lib/data` import를 차단.
 2. **구독을 인터페이스로 감싼다** → `lib/realtime/index.ts` 배럴 하나만 소비자에게 노출. ESLint가 `lib/data`·Supabase 클라이언트의 산발적 직접 import를 차단해 배럴 경유를 유도.
 3. **`/sample` 4상태에 도메인 오류 포함** → 아래 "`/sample` 4상태 규칙" 참고.
-4. **인증 경계는 레이아웃에서 처리** → `src/app/layout.tsx`(루트) 또는 인증이 필요한 세그먼트의 `layout.tsx`에서 처리한다. `proxy.ts`는 D-011로 v0.1 범위 밖이므로 만들지 않는다.
+4. **인증 경계는 레이아웃에서 처리** → `proxy.ts`는 D-011로 v0.1 범위 밖이므로 만들지 않는다. 실제로는 **성격이 다른 두 형태**가 코드에 공존한다(6일차, I-025 해소로 정리) — 둘을 섞어 쓰지 않는다.
+   - **게스트 전용 진입 페이지의 자기 가드**: 랜딩(`/`)·`/login`·`/signup`·`/onboarding` 4개는 각 `page.tsx`가 `getAuthSession()`+`isAuthenticated()`+`redirect()`를 직접 갖는다(반대 방향 가드 — "이미 로그인했으면 다른 곳으로"). 이 넷은 하위 세그먼트가 없는 단일 페이지이고 앞으로도 늘어나지 않는 고정된 집합이라, 페이지마다 반복해도 "하나를 빠뜨리는" 위험이 없다 — 레이아웃으로 모을 이유가 없다.
+   - **인증된 앱 라우트 하위 트리 보호**: `/home`·`/calendar`·`/notifications`·`/invitations`·`/meetups/[meetupId]`·`/settings`·`/crews/new`·`/crews/[crewId]/{board,chat,members,settings}`처럼 **로그인이 필요한 실제 앱 콘텐츠**는 `src/app/(app)/layout.tsx` 라우트 그룹 레이아웃 **한 곳**이 가드한다("미로그인이면 `/login`으로" — 앞의 것과 반대 방향). 이 집합은 계속 페이지가 늘어나는 쪽이라 개별 `page.tsx`에 반복하면 하나를 빠뜨릴 위험이 실제로 있다 — 실제로 6일차에 `/calendar`가 이 가드를 빠뜨린 채 배포됐었다(라우트 그룹은 URL에 영향이 없다 — `(app)/calendar/page.tsx`는 여전히 `/calendar`).
+   - **`/crews`·`/crews/[crewId]`는 의도적으로 `(app)` 밖이다(6일차, I-036 해소).** 크루 탐색(FR-014)·공개 크루 홈 열람(FR-011)은 권한 매트릭스(`requirements.md:236-237`)가 비로그인 방문자에게 `○³`(공개 크루 한정 허용)로 명시한다 — D-007 그대로다. 반면 같은 크루의 `new`(개설)·`board`·`chat`·`members`·`settings`는 확실히 회원 전용이라 `(app)` 안에 있다. **처음엔 팀장 지시("`/crews` 하위 전부")를 문자 그대로 따라 이 둘까지 `(app)` 안에 넣었다가 이 회귀를 냈다** — 요구사항을 다시 대조해 잡아내고 두 파일만 `(app)` 밖으로 되돌렸다.
+     - **이 구조(같은 이름 폴더를 라우트 그룹 안팎으로 분할)는 Next.js 16에서 허용되고 실측 검증됐다.** `route-groups.md`의 "Conflicting paths" 캐비어트는 **동일 URL에 두 페이지가 겹치는 경우**만 다루고(우리 케이스는 `/crews`·`/crews/[crewId]`·`/crews/new`·`/crews/[crewId]/board` 전부 URL이 다르다), `project-structure.md`의 "Opting specific segments into a layout" 공식 예시는 **다른 이름의 형제 폴더**(`account`/`cart` vs `checkout`)를 그룹 안팎으로 가르는 그림이라 우리 경우(같은 이름 `crews` 분할)와 문서 예시가 정확히 일치하지는 않았다 — 문서만으로는 허용·금지 어느 쪽도 확정할 수 없었다. **`npm run build`로 실측한 결과 정상 동작한다**(21개 라우트 전부 올바르게 resolve — `/crews`·`/crews/[crewId]`는 `(app)` 밖 레이아웃 체인, 나머지 크루 하위 라우트는 `(app)/layout.tsx`를 거치는 체인으로 각각 분리) — 6일차에 확정. 다음에 같은 상황(그룹 경계로 라우트를 쪼개야 하는데 문서 예시가 우리 경우와 정확히 안 맞음)을 만나면 이 사례를 참고해 문서를 다시 왕복하지 않아도 된다.
+   - **새 보호 페이지를 추가할 때**: `src/app/(app)/` 아래에 라우트를 만들면 **리다이렉트용 가드**는 자동으로 적용된다 — `page.tsx`에 "미로그인이면 `/login`으로" 리다이렉트를 다시 쓰지 않는다. 새 게스트 전용 진입 페이지가 필요하면(흔치 않음) `(app)` 밖에 두고 그 페이지 자신이 반대 방향 가드를 갖는다.
+   - **금지되는 재작성과 허용되는 재작성은 다르다**(6일차, CORE 재검증 E-1로 정리 — 이전 판에는 이 구분이 없어 "인증 체크를 다시 쓰지 않는다"가 "어떤 세션 관련 코드도 다시 쓰면 안 된다"로 오독될 여지가 있었다):
+     - **금지**: `(app)/` 아래 `page.tsx`·컨테이너가 `redirect("/login")`을 다시 호출하는 것. 레이아웃이 이미 했다 — 이중 가드다.
+     - **허용, 사실 필수**: `(app)/` 아래 컨테이너가 `AuthSession` 유니온이 아니라 좁혀진 `authenticated` 타입을 요구하는 경우(예: `AccountSettingsContainer`·`MonthCalendarContainer`가 `session.profileId`를 바로 쓴다), TypeScript는 레이아웃의 보장을 정적으로 모르므로 **타입 내로잉용 재조회**가 필요하다. 이때 쓰는 게 `src/components/shell/auth-session.ts`의 **`assertAuthenticatedSession(session)`**(`asserts` 타입 서술어)이다 — 내부에서 실패하면 `redirect`가 아니라 `throw`한다(도달하면 사용자 오류가 아니라 레이아웃 가드 자체가 깨졌다는 뜻, D-030 ③). `as` 단언을 쓰지 않는 이유도 같다 — 단언은 이 불변식이 깨져도 조용히 통과시킨다.
+     - **`(app)` 밖(예: 크루 게시판처럼 D-007상 guest도 유효한 역할인 라우트)**: 이 헬퍼를 쓰지 않는다. 대신 `src/components/board/resolve-board-viewer.ts`의 패턴 — guest를 오류가 아니라 `role: "guest"`인 정상 값으로 반환하고, `lib/rules/permission.ts`의 `checkPermission` 매트릭스가 거부 여부를 판정하게 한다. 두 패턴은 **경쟁하는 두 방식이 아니라 서로 다른 문제**(guest가 애초에 불가능한 곳 vs guest가 유효한 역할인 곳)를 푼다 — 섞어 쓰지 않는다.
+     - **fail-open 금지**: 인증되지 않은/판정 불가 상태를 "실존 Mock 사용자로 대체"해 조용히 통과시키지 않는다(예전 `MonthCalendarContainer`의 `MOCK_FALLBACK_PROFILE_ID`가 이 실수였다 — 6일차 CORE 재검증 E-2로 제거) — 안전한 실패는 항상 거부(guest 역할 낙하 또는 `assertAuthenticatedSession`의 `throw`) 쪽이어야 한다.
+   - **`(app)`은 인증 게이트이지 크루원 게이트가 아니다**(6일차, 팀장 판정 E-3 — I-035). `(app)/layout.tsx`가 보장하는 불변식은 "로그인했다"까지다 — "그 크루의 멤버다"는 별개 판정이고 이 레이아웃이 대신해 주지 않는다. D-007이 크루 게시판·채팅·멤버 목록·캘린더를 크루원 전용으로 규정하므로, `(app)/crews/[crewId]/*`를 만들 때 "`(app)` 안이니 안전하다"고 착각하지 않는다 — 크루원 여부는 `resolveBoardViewer`처럼 호출부가 별도로 판정해야 하며(Task 016B·017A에서 `[crewId]` 세그먼트 레벨 게이트로 정리 예정, I-035 참고), 그 판정이 없는 컨테이너는 라우트 레벨에서 아무나 도달할 수 있다.
 
 ## `/sample` 4상태 규칙
 

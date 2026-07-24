@@ -104,7 +104,11 @@ Next.js 16.2.11(App Router) + React 19.2.4 + TypeScript(strict) + Tailwind CSS v
 
 ### 테스트계정 (계정/비밀번호)
 
-인증 도입 후 사용할 계정입니다. 현재는 인증 기능이 없어 사용처가 없습니다.
+용도가 다른 두 벌이 있습니다. **섞어 쓰면 로그인이 실패합니다.**
+
+**1. 실 인증용 (Supabase Auth 연동 후)** — 아직 사용처가 없습니다. Task 026에서 실제 계정을 만들 때 이 값을 씁니다.
 
 - chopin0625/qwer1234
 - 0625chopin/qwer1234
+
+**2. Mock 로그인 데모용 (지금 `/login`에서 쓰는 것)** — 값의 단일 소스는 `src/lib/actions/login.ts`의 `MOCK_DEMO_ACCOUNTS`입니다. **여기에 값을 복사해 두지 않습니다** — 두 곳에 적으면 반드시 어긋납니다. 시드 데이터(`fixtures.ts`)와 `profileId`를 맞춰 두어 로그인하면 크루·게시글·알림이 채워진 상태를 그대로 볼 수 있습니다. Task 026에서 실 인증으로 교체할 때 함께 제거합니다.

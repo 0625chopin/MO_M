@@ -39,3 +39,32 @@ export function isAuthenticated(
 ): session is Extract<AuthSession, { status: "authenticated" }> {
   return session.status === "authenticated";
 }
+
+/**
+ * `src/app/(app)/` 아래(D-030 ④, I-025) — 즉 `(app)/layout.tsx`가 이미 인증을 보장하는
+ * 컨테이너·페이지에서만 쓴다. 그 경계 밖(예: 크루 게시판처럼 D-007에 따라 guest가 **실제로
+ * 유효한 역할**인 라우트)에서는 이 함수를 쓰지 않는다 — 거기서는 `resolveBoardViewer`
+ * (`src/components/board/resolve-board-viewer.ts`)처럼 guest를 오류가 아니라 정상 역할로
+ * 받아 `checkPermission`의 매트릭스가 거부하게 한다. 두 패턴이 서로 다른 문제를 푸는 것이지
+ * 경쟁하는 두 방식이 아니다 — `docs/CONVENTIONS.md` D-030 ④ 절 참고(6일차, CORE 재검증
+ * E-1로 정리).
+ *
+ * **왜 `redirect` 대신 `throw`인가**: `(app)/layout.tsx`가 이미 리다이렉트를 끝냈으므로
+ * 여기서 다시 리다이렉트하면 이중 가드다. 그런데도 이 함수가 필요한 이유는 순수히
+ * **타입스크립트 내로잉**이다 — 레이아웃이 보장하는 불변식("이 지점에 도달했다면 인증된
+ * 세션이다")을 컴파일러는 정적으로 모르므로, 실제 런타임 체크 하나가 있어야
+ * `Extract<AuthSession, {status:"authenticated"}>`로 좁혀진다. 그 체크가 실패하는 경우
+ * (정상 경로에서는 도달 불가)는 사용자 오류가 아니라 레이아웃 가드 자체가 깨졌다는 뜻이므로
+ * `redirect`가 아니라 `throw`로 표현한다(D-030 ③ — 진짜 프로그래밍 오류는 예외로 던진다).
+ * `as` 타입 단언을 쓰지 않는 이유도 같다 — 단언은 이 불변식이 실제로 깨져도 조용히 통과시켜
+ * 버그를 숨기지만, `throw`는 런타임에 실제로 검사한다.
+ */
+export function assertAuthenticatedSession(
+  session: AuthSession,
+): asserts session is Extract<AuthSession, { status: "authenticated" }> {
+  if (!isAuthenticated(session)) {
+    throw new Error(
+      "assertAuthenticatedSession: (app) 레이아웃의 인증 가드를 통과했는데 세션이 미인증 상태다 — 레이아웃 가드가 깨졌다는 뜻이다.",
+    );
+  }
+}
