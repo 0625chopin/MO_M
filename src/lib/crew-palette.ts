@@ -75,6 +75,17 @@ export interface CrewPaletteColor {
   readonly contrastOnFill: number;
   /** Approximate hue name, for debugging/QA readability only — not for logic. */
   readonly approxHueName: string;
+  /**
+   * Korean color name for screen-reader-facing labels (e.g. a color-swatch radio's
+   * `aria-label`) — a direct Korean translation of {@link approxHueName}. This is palette
+   * *data* colocated with `hex`/`approxHueName`, not a UI copy string, so it lives here
+   * instead of `lib/strings/ko.ts` (10일차 접근성 QA 후속 조치, Task 017B 이슈 D — team-lead
+   * directive: this module is the crew-domain shared source, and the name is tied 1:1 to
+   * the fixed palette entry rather than varying per feature/screen like normal UI copy).
+   * If a non-Korean locale is ever added, these 12 values need their own translation pass
+   * same as any other locale-bound string.
+   */
+  readonly nameKo: string;
 }
 
 /**
@@ -85,18 +96,18 @@ export interface CrewPaletteColor {
  * non-text) against both the light and dark --background token.
  */
 export const CREW_PALETTE: readonly CrewPaletteColor[] = [
-  { index: 0, hex: "#939300", approxHueName: "olive", relativeLuminance: 0.2707, contrastVsLightBg: 3.27, contrastVsDarkBg: 6.05, textOn: "ink", contrastOnFill: 5.93 },
-  { index: 1, hex: "#8d1cff", approxHueName: "violet", relativeLuminance: 0.1371, contrastVsLightBg: 5.61, contrastVsDarkBg: 3.53, textOn: "paper", contrastOnFill: 5.37 },
-  { index: 2, hex: "#ff3e9e", approxHueName: "pink", relativeLuminance: 0.2717, contrastVsLightBg: 3.26, contrastVsDarkBg: 6.07, textOn: "ink", contrastOnFill: 5.95 },
-  { index: 3, hex: "#007475", approxHueName: "teal", relativeLuminance: 0.1378, contrastVsLightBg: 5.59, contrastVsDarkBg: 3.54, textOn: "paper", contrastOnFill: 5.36 },
-  { index: 4, hex: "#3b7500", approxHueName: "green", relativeLuminance: 0.1365, contrastVsLightBg: 5.63, contrastVsDarkBg: 3.52, textOn: "paper", contrastOnFill: 5.39 },
-  { index: 5, hex: "#8080ff", approxHueName: "periwinkle", relativeLuminance: 0.2725, contrastVsLightBg: 3.26, contrastVsDarkBg: 6.08, textOn: "ink", contrastOnFill: 5.96 },
-  { index: 6, hex: "#00a352", approxHueName: "emerald", relativeLuminance: 0.2680, contrastVsLightBg: 3.30, contrastVsDarkBg: 6.00, textOn: "ink", contrastOnFill: 5.88 },
-  { index: 7, hex: "#009200", approxHueName: "green (deep)", relativeLuminance: 0.2056, contrastVsLightBg: 4.11, contrastVsDarkBg: 4.82, textOn: "ink", contrastOnFill: 4.72 },
-  { index: 8, hex: "#007af5", approxHueName: "blue", relativeLuminance: 0.2051, contrastVsLightBg: 4.12, contrastVsDarkBg: 4.81, textOn: "ink", contrastOnFill: 4.72 },
-  { index: 9, hex: "#dc00dc", approxHueName: "magenta", relativeLuminance: 0.2038, contrastVsLightBg: 4.14, contrastVsDarkBg: 4.79, textOn: "ink", contrastOnFill: 4.69 },
-  { index: 10, hex: "#c36200", approxHueName: "brown/orange", relativeLuminance: 0.2034, contrastVsLightBg: 4.14, contrastVsDarkBg: 4.78, textOn: "ink", contrastOnFill: 4.68 },
-  { index: 11, hex: "#d20000", approxHueName: "red", relativeLuminance: 0.1370, contrastVsLightBg: 5.61, contrastVsDarkBg: 3.53, textOn: "paper", contrastOnFill: 5.38 },
+  { index: 0, hex: "#939300", approxHueName: "olive", nameKo: "올리브색", relativeLuminance: 0.2707, contrastVsLightBg: 3.27, contrastVsDarkBg: 6.05, textOn: "ink", contrastOnFill: 5.93 },
+  { index: 1, hex: "#8d1cff", approxHueName: "violet", nameKo: "보라색", relativeLuminance: 0.1371, contrastVsLightBg: 5.61, contrastVsDarkBg: 3.53, textOn: "paper", contrastOnFill: 5.37 },
+  { index: 2, hex: "#ff3e9e", approxHueName: "pink", nameKo: "분홍색", relativeLuminance: 0.2717, contrastVsLightBg: 3.26, contrastVsDarkBg: 6.07, textOn: "ink", contrastOnFill: 5.95 },
+  { index: 3, hex: "#007475", approxHueName: "teal", nameKo: "청록색", relativeLuminance: 0.1378, contrastVsLightBg: 5.59, contrastVsDarkBg: 3.54, textOn: "paper", contrastOnFill: 5.36 },
+  { index: 4, hex: "#3b7500", approxHueName: "green", nameKo: "초록색", relativeLuminance: 0.1365, contrastVsLightBg: 5.63, contrastVsDarkBg: 3.52, textOn: "paper", contrastOnFill: 5.39 },
+  { index: 5, hex: "#8080ff", approxHueName: "periwinkle", nameKo: "연보라색", relativeLuminance: 0.2725, contrastVsLightBg: 3.26, contrastVsDarkBg: 6.08, textOn: "ink", contrastOnFill: 5.96 },
+  { index: 6, hex: "#00a352", approxHueName: "emerald", nameKo: "에메랄드색", relativeLuminance: 0.2680, contrastVsLightBg: 3.30, contrastVsDarkBg: 6.00, textOn: "ink", contrastOnFill: 5.88 },
+  { index: 7, hex: "#009200", approxHueName: "green (deep)", nameKo: "짙은 초록색", relativeLuminance: 0.2056, contrastVsLightBg: 4.11, contrastVsDarkBg: 4.82, textOn: "ink", contrastOnFill: 4.72 },
+  { index: 8, hex: "#007af5", approxHueName: "blue", nameKo: "파란색", relativeLuminance: 0.2051, contrastVsLightBg: 4.12, contrastVsDarkBg: 4.81, textOn: "ink", contrastOnFill: 4.72 },
+  { index: 9, hex: "#dc00dc", approxHueName: "magenta", nameKo: "마젠타색", relativeLuminance: 0.2038, contrastVsLightBg: 4.14, contrastVsDarkBg: 4.79, textOn: "ink", contrastOnFill: 4.69 },
+  { index: 10, hex: "#c36200", approxHueName: "brown/orange", nameKo: "갈색", relativeLuminance: 0.2034, contrastVsLightBg: 4.14, contrastVsDarkBg: 4.78, textOn: "ink", contrastOnFill: 4.68 },
+  { index: 11, hex: "#d20000", approxHueName: "red", nameKo: "빨간색", relativeLuminance: 0.1370, contrastVsLightBg: 5.61, contrastVsDarkBg: 3.53, textOn: "paper", contrastOnFill: 5.38 },
 ].map((c) => ({
   ...c,
   textOn: c.textOn as "ink" | "paper",

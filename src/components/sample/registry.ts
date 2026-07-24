@@ -1,3 +1,4 @@
+import { a11ySection } from "@/components/sample/sections/a11y";
 import { accountSection } from "@/components/sample/sections/account";
 import { authSection } from "@/components/sample/sections/auth";
 import { boardSection } from "@/components/sample/sections/board";
@@ -8,6 +9,7 @@ import { crewsSection } from "@/components/sample/sections/crews";
 import { errorsSection } from "@/components/sample/sections/errors";
 import { formsSection } from "@/components/sample/sections/forms";
 import { foundationSection } from "@/components/sample/sections/foundation";
+import { invitationsSection } from "@/components/sample/sections/invitations";
 import { meetupSection } from "@/components/sample/sections/meetup";
 import { notificationsSection } from "@/components/sample/sections/notifications";
 import { overlaysSection } from "@/components/sample/sections/overlays";
@@ -45,4 +47,6 @@ export const SHOWCASE_SECTIONS: ShowcaseSection[] = [
   accountSection,
   crewsSection,
   notificationsSection,
+  invitationsSection,
+  a11ySection,
 ];

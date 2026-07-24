@@ -57,7 +57,7 @@ export function PollResult({
         {meetupHref && (
           <Link
             href={meetupHref}
-            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            className="inline-flex items-center py-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
             {strings.meetup.detail.viewConfirmed}
           </Link>

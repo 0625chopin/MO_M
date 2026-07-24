@@ -95,7 +95,7 @@ export function MeetupDetail({ meetup, participants, attendanceState }: MeetupDe
         {meetup.postHref && (
           <Link
             href={meetup.postHref}
-            className="text-sm text-primary underline-offset-2 hover:underline"
+            className="inline-flex items-center py-1 text-sm text-primary underline-offset-2 hover:underline"
           >
             {strings.meetup.detail.goToPost}
           </Link>

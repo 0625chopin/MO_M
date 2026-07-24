@@ -10,9 +10,12 @@ import { CrewGrid } from "@/components/crews/CrewGrid";
 import { CrewGridSkeleton } from "@/components/crews/CrewGridSkeleton";
 import { CrewHome } from "@/components/crews/CrewHome";
 import { CrewHomeSkeleton } from "@/components/crews/CrewHomeSkeleton";
+import { CrewInfoForm } from "@/components/crews/CrewInfoForm";
 import { CrewIntroPreview } from "@/components/crews/CrewIntroPreview";
 import { CrewMembersSkeleton } from "@/components/crews/CrewMembersSkeleton";
 import { CrewSearchBar } from "@/components/crews/CrewSearchBar";
+import { CrewSettingsSkeleton } from "@/components/crews/CrewSettingsSkeleton";
+import { CrewVisibilityForm } from "@/components/crews/CrewVisibilityForm";
 import { InviteMemberDialog } from "@/components/crews/InviteMemberDialog";
 import { JoinRequestButton } from "@/components/crews/JoinRequestButton";
 import { JoinRequestPanel } from "@/components/crews/JoinRequestPanel";
@@ -180,10 +183,10 @@ const SAMPLE_HISTORY_REQUESTS: JoinRequestRowViewModel[] = [
  */
 export const crewsSection = defineSection({
   id: "crews",
-  label: "크루 탐색·개설·홈·멤버 관리",
-  title: "크루 탐색 · 크루 개설 · 크루 홈 · 멤버 관리",
+  label: "크루 탐색·개설·홈·멤버 관리·설정",
+  title: "크루 탐색 · 크루 개설 · 크루 홈 · 멤버 관리 · 크루 설정",
   description:
-    "FR-010·011·014·020·022·023·024·026(D-002·D-005·D-007·D-008·D-014·D-016·D-017). 실제 라우트는 /crews · /crews/new · /crews/[crewId] · /crews/[crewId]/members — 크루 탐색은 검색바·카테고리 필터·카드 그리드·무한 스크롤·가입됨 배지(CrewSearchBar·CrewGrid·CrewCard), 크루 홈은 public/private × 소속/비소속 조합 중 실제로 다른 모습이 필요한 세 갈래(CrewHome·CrewIntroPreview·PrivateCrewNotice)만 표현 컴포넌트로, 멤버 관리는 역할 정렬 목록·초대 다이얼로그·가입 신청 승인/반려 탭(MemberList·InviteMemberDialog·JoinRequestPanel)으로 나눴습니다.",
+    "FR-010·011·012·014·020·022·023·024·026(D-002·D-005·D-007·D-008·D-014·D-016·D-017). 실제 라우트는 /crews · /crews/new · /crews/[crewId] · /crews/[crewId]/members · /crews/[crewId]/settings — 크루 탐색은 검색바·카테고리 필터·카드 그리드·무한 스크롤·가입됨 배지(CrewSearchBar·CrewGrid·CrewCard), 크루 홈은 public/private × 소속/비소속 조합 중 실제로 다른 모습이 필요한 세 갈래(CrewHome·CrewIntroPreview·PrivateCrewNotice)만 표현 컴포넌트로, 멤버 관리는 역할 정렬 목록·초대 다이얼로그·가입 신청 승인/반려 탭(MemberList·InviteMemberDialog·JoinRequestPanel), 크루 설정은 정보 수정·공개 범위 전환(CrewInfoForm·CrewVisibilityForm, Task 017B)으로 나눴습니다.",
   items: [
     {
       name: "CrewCreateForm",
@@ -498,6 +501,58 @@ export const crewsSection = defineSection({
             <div className="p-4">
               <ErrorState title={strings.crew.members.requests.errors.alreadyDecided} />
             </div>
+          </PreviewFrame>
+        ),
+      },
+    },
+    {
+      name: "크루 설정 — 정보 수정 (CrewInfoForm)",
+      note: "실제 컴포넌트입니다(FR-011, D-016, Task 017B). 이름·소개·카테고리는 기존 값이 채워진 상태로 시작하고, 캘린더 색상은 팔레트 12색 라디오 그룹입니다 — 자유 색상 입력이 아니라 이미 검증된 값 중에서만 고를 수 있습니다. /sample은 게스트 세션이라 제출하면 '로그인이 만료됐어요' 폼 오류가 뜹니다(CrewCreateForm과 같은 근거). 빈·오류 패널은 의도적으로 비웠습니다 — 제출 오류는 useActionState 내부 상태라 정적 prop으로 미리 주입할 수 없습니다(CrewCreateForm 전례와 동일).",
+      panels: {
+        default: (
+          <PreviewFrame height={640}>
+            <div className="mx-auto w-full max-w-md p-4">
+              <CrewInfoForm
+                crewId="crew-1"
+                initialName="주말 러닝 크루"
+                initialDescription="매주 토요일 아침 한강에서 함께 뜁니다."
+                initialCategory="운동"
+                initialColorKey={0}
+              />
+            </div>
+          </PreviewFrame>
+        ),
+        loading: (
+          <PreviewFrame height={120}>
+            <div className="mx-auto flex w-full max-w-md justify-center p-4">
+              <Button disabled className="w-full">
+                <Loader2Icon aria-hidden="true" className="animate-spin" />
+                {strings.crew.settings.info.submitPending}
+              </Button>
+            </div>
+          </PreviewFrame>
+        ),
+      },
+    },
+    {
+      name: "크루 설정 — 공개 범위 (CrewVisibilityForm)",
+      note: "실제 컴포넌트입니다(FR-012, D-007·D-002, Task 017B). CrewSettingsContainer가 crew:update_visibility(오너 전용)를 통과한 사람에게만 이 폼을 렌더합니다 — CrewInfoForm과 권한 등급이 달라 별도 폼·별도 액션으로 분리했습니다. 게스트 세션이라 제출하면 세션 만료 오류로 막힙니다.",
+      panels: {
+        default: (
+          <PreviewFrame height={260}>
+            <div className="mx-auto w-full max-w-md p-4">
+              <CrewVisibilityForm crewId="crew-1" initialVisibility="public" />
+            </div>
+          </PreviewFrame>
+        ),
+        loading: (
+          <PreviewFrame height={200}>
+            <CrewSettingsSkeleton />
+          </PreviewFrame>
+        ),
+        error: (
+          <PreviewFrame height={260}>
+            <RouteErrorBoundary kind="forbidden" />
           </PreviewFrame>
         ),
       },

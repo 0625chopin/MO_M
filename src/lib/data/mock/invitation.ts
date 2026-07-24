@@ -27,6 +27,10 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
   return invitation;
 }
 
+export async function getInvitationById(id: Id): Promise<Invitation | null> {
+  return store.invitations.find((i) => i.id === id) ?? null;
+}
+
 export async function listInvitationsForProfile(
   inviteeId: Id,
   status?: InvitationStatus,

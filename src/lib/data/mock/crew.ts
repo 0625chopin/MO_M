@@ -137,7 +137,13 @@ export async function createCrew(input: CreateCrewInput): Promise<Crew> {
   return crew;
 }
 
-export type UpdateCrewInfoInput = Partial<Pick<Crew, "name" | "description" | "category">>;
+/**
+ * FR-011이 "크루명, 소개, 카테고리, 대표 이미지, 색상, 규칙을 조회하고 수정한다"고 명시한 대로
+ * `colorKey`(캘린더 팔레트 인덱스, D-016 — "변경은 크루 설정에서만")도 이 정보 수정의 일부다.
+ * 개설 시 자동 배정된 값(`crewColorIndex`)을 크루 설정 화면에서 팔레트 12색 내로 수동
+ * 재지정할 수 있다 — 유효 범위(0~11) 검증은 호출자(Server Action)가 `CREW_PALETTE_SIZE`로 한다.
+ */
+export type UpdateCrewInfoInput = Partial<Pick<Crew, "name" | "description" | "category" | "colorKey">>;
 
 /** 크루 정보 수정(FR-011). */
 export async function updateCrewInfo(
@@ -265,6 +271,47 @@ export async function updateCrewMembershipStatus(
   if (!membership) return err("not_found", `crew ${crewId} 의 멤버십(${profileId})을 찾을 수 없다.`);
   membership.status = status;
   membership.removedReason = status === "removed" ? removedReason : null;
+  return ok(membership);
+}
+
+/**
+ * 초대 수락(FR-021) — 멤버십 쪽 반영. 2.4절 `invited --accept_invitation--> active`를
+ * `transitionCrewMembershipStatus`로 검증해 그대로 옮긴다(`approveCrewMembership`과 같은
+ * 패턴 — 발생 이벤트(오너·임원의 승인 vs 초대 대상 본인의 수락)만 다르다).
+ */
+export async function acceptCrewInvitationMembership(
+  crewId: Id,
+  profileId: Id,
+): Promise<DataResult<CrewMembership>> {
+  const membership = store.crewMemberships.find(
+    (m) => m.crewId === crewId && m.profileId === profileId,
+  );
+  if (!membership) return err("not_found", `crew ${crewId} 의 멤버십(${profileId})을 찾을 수 없다.`);
+  const next = transitionCrewMembershipStatus(membership.status, "accept_invitation");
+  if (!next) {
+    return err("conflict", `crew ${crewId} 의 멤버십(${profileId})은 수락 가능한 상태가 아니다.`);
+  }
+  membership.status = next;
+  membership.joinedAt = new Date().toISOString();
+  return ok(membership);
+}
+
+/** 초대 거절(FR-021) — 멤버십 쪽 반영. 2.4절 `invited --decline_invitation--> declined`.
+ *  AC2("거절해도 재초대 가능")는 이 함수가 아니라 `evaluateInviteEligibility`의 몫이다 —
+ *  `declined`는 그 판정에서 재초대 차단 대상이 아니다. */
+export async function declineCrewInvitationMembership(
+  crewId: Id,
+  profileId: Id,
+): Promise<DataResult<CrewMembership>> {
+  const membership = store.crewMemberships.find(
+    (m) => m.crewId === crewId && m.profileId === profileId,
+  );
+  if (!membership) return err("not_found", `crew ${crewId} 의 멤버십(${profileId})을 찾을 수 없다.`);
+  const next = transitionCrewMembershipStatus(membership.status, "decline_invitation");
+  if (!next) {
+    return err("conflict", `crew ${crewId} 의 멤버십(${profileId})은 거절 가능한 상태가 아니다.`);
+  }
+  membership.status = next;
   return ok(membership);
 }
 

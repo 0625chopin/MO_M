@@ -1,16 +1,24 @@
-import { strings } from "@/lib/strings";
+import { Suspense } from "react";
+
+import { CrewSettingsContainer } from "@/components/crews/CrewSettingsContainer";
+import { CrewSettingsSkeleton } from "@/components/crews/CrewSettingsSkeleton";
 
 /**
- * 크루 설정 페이지 (SC-15, PRD §6 "크루 설정 페이지", F006·F007·F014·F032). 공개 범위 전환은
- * 오너 전용, 캘린더 색 수동 지정은 팔레트 내로 제한된다(D-016) — 폼 구현은 Task 017B에서 채운다.
- * 그때 `params`의 crewId(현재는 라우트 세그먼트로만 존재)로 크루 설정을 조회한다.
+ * 크루 설정 페이지 (SC-15, PRD §6 "크루 설정 페이지", F006·F007·F014·F032, Task 017B). 정보
+ * 수정·공개 범위 전환(오너 전용)·캘린더 색 수동 지정(D-016)은 `CrewSettingsContainer`
+ * (D-030 ①)가 조립한다. `page.tsx`는 얇은 껍데기다(`docs/CONVENTIONS.md`).
+ *
+ * `(app)/crews/[crewId]/layout.tsx`의 크루원 게이트를 이미 거친 뒤라 "활성 멤버십인가"는
+ * 여기서 다시 확인하지 않는다(D-039). Next.js 16에서 `params`는 비동기라 await 한다.
  */
-export default function CrewSettingsPage() {
+export default async function CrewSettingsPage({ params }: { params: Promise<{ crewId: string }> }) {
+  const { crewId } = await params;
+
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-      <h1 className="text-xl font-semibold text-foreground">
-        {strings.crew.settings.title}
-      </h1>
+    <main className="flex flex-1 flex-col">
+      <Suspense fallback={<CrewSettingsSkeleton />}>
+        <CrewSettingsContainer crewId={crewId} />
+      </Suspense>
     </main>
   );
 }
