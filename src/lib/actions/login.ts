@@ -13,11 +13,11 @@ import { strings } from "@/lib/strings";
  * (CON-06, Task 026 이전). `profileId`는 `fixtures.ts` 시드와 값을 맞췄다 — 이 계정으로
  * 로그인하면 이미 데이터가 채워진 크루·게시글·알림을 그대로 볼 수 있다.
  *
- * **`CLAUDE.md`의 「테스트계정」(`chopin0625`/`0625chopin`, 비밀번호 `qwer1234`)과는 별개다.**
- * 그 계정은 "인증 도입 후 사용할 계정"이라 실제 Supabase Auth 연동(Task 026 이후) 대상이고,
- * 여기 있는 계정은 그 전까지 Mock 로그인 흐름(화면 상태 시연)만을 위한 것이다. 두 문서가
- * 서로 다른 "공식 테스트 계정"을 가리키는 상태이며, 이 불일치 자체는 `CLAUDE.md` 쪽에서
- * 정리한다(이 파일에서 값을 맞추지 않는다).
+ * **`CLAUDE.md`의 「테스트계정」과는 용도가 다르다.** 그쪽 1번(`chopin0625`/`0625chopin`)은
+ * 실제 Supabase Auth 연동(Task 026 이후) 대상이고, 여기 있는 계정은 그 전까지 Mock 로그인
+ * 흐름(화면 상태 시연)만을 위한 것이다. `CLAUDE.md`는 이 값을 복사하지 않고 이 파일을
+ * 가리키기만 한다 — **`MOCK_DEMO_ACCOUNTS`가 Mock 데모 계정의 단일 소스다.** 값을 바꾸면
+ * 여기만 고치면 되고, Task 026에서 실 인증으로 교체할 때 이 상수를 통째로 제거한다.
  */
 const MOCK_DEMO_ACCOUNTS: ReadonlyArray<{
   email: string;
