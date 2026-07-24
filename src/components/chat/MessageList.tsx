@@ -7,7 +7,7 @@ import { loadScrollAnchor, saveScrollAnchor } from "@/components/chat/chat-scrol
 import type { ChatTimelineItem } from "@/components/chat/message-view-models";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
-import { strings } from "@/lib/strings";
+import { strings, t } from "@/lib/strings";
 import type { Id } from "@/lib/types";
 
 export interface MessageListProps {
@@ -139,6 +139,33 @@ export function MessageList({
     };
   }, [roomId]);
 
+  // NFR-021("새 메시지"는 live region으로 안내) — 스크롤 보정 effect와는 별도 ref로 추적한다.
+  // 위로 이어 로드는 맨 앞 메시지가 바뀔 뿐 맨 뒤(prevLastIdRef 기준)는 그대로라 오탐하지
+  // 않는다. 본인이 보낸 메시지는 낙관적 렌더든 서버 확정 echo든 스스로 이미 알고 있어 알리지
+  // 않는다 — 그래서 낙관적 항목의 `id`가 `clientKey`에서 서버 `id`로 바뀌어도(둘 다 본인
+  // 메시지) 안전하다.
+  const announceRef = useRef<HTMLDivElement>(null);
+  const prevLastIdRef = useRef<string | null>(null);
+  const isFirstAnnounceRef = useRef(true);
+
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage) return;
+    if (isFirstAnnounceRef.current) {
+      isFirstAnnounceRef.current = false;
+      prevLastIdRef.current = lastMessage.id;
+      return;
+    }
+    if (lastMessage.id === prevLastIdRef.current) return;
+    prevLastIdRef.current = lastMessage.id;
+    if (lastMessage.senderId === viewerProfileId) return;
+    if (announceRef.current) {
+      announceRef.current.textContent = t((s) => s.chat.message.newMessageAnnouncement, {
+        name: lastMessage.senderDisplayName,
+      });
+    }
+  }, [messages, viewerProfileId]);
+
   useLayoutEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel || !hasMore) return;
@@ -167,6 +194,7 @@ export function MessageList({
 
   return (
     <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto @container">
+      <div ref={announceRef} aria-live="polite" aria-atomic="true" className="sr-only" />
       <div className="flex flex-col gap-3 p-4">
         {hasMore && (
           <div ref={sentinelRef} className="flex justify-center py-2" aria-hidden={!isLoadingMore}>

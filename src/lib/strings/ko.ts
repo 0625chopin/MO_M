@@ -349,8 +349,57 @@ export const ko = {
         },
       },
     },
+    /**
+     * SC-15 크루 설정 페이지(F006·F007·F014·F032, Task 017B). 정보 수정(`info.*`)·공개 범위
+     * 전환(`visibility.*`, 오너 전용) 두 폼의 문구를 모은다. 필드별 유효성 검증 문구
+     * (`nameRequired`·`descriptionTooLong` 등)는 `crew.create.errors`와 같은 개념(크루명·소개·
+     * 카테고리 검증)이지만 그대로 참조하지 않고 이 아래 새로 선언한다 — `crew.create`·
+     * `crew.members`가 이미 `sessionExpired`처럼 같은 개념도 폼(도메인 맥락)마다 따로 두는
+     * 이 파일의 기존 관례(§4)를 그대로 따른다.
+     */
     settings: {
       title: "크루 설정",
+      description: "크루 정보를 고치고, 오너라면 공개 범위도 바꿀 수 있어요.",
+      info: {
+        fields: {
+          name: "크루명",
+          description: "소개",
+          category: "카테고리",
+          color: "캘린더 색상",
+        },
+        /** 팔레트 스와치 라디오 하나의 `aria-label`(D-016, 10일차 접근성 QA 이슈 D). `{n}`은
+         *  1-based 표시 번호, `{name}`은 `CREW_PALETTE`(`lib/crew-palette.ts`)의 `nameKo` —
+         *  번호만으로는 스크린 리더 사용자가 실제 색을 알 수 없어 색 이름을 함께 읽는다. */
+        colorOptionLabel: "{n}번 {name}",
+        submit: "저장",
+        submitPending: "저장하는 중…",
+        saved: "저장했어요",
+        errors: {
+          sessionExpired: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+          notAllowed: "크루 정보를 수정할 권한이 없어요",
+          nameRequired: "크루명을 입력해 주세요",
+          nameTooLong: "크루명은 30자 이하로 입력해 주세요",
+          nameBannedWord: "크루명에 사용할 수 없는 단어가 포함되어 있어요",
+          descriptionRequired: "소개를 입력해 주세요",
+          descriptionTooLong: "소개는 300자 이하로 입력해 주세요",
+          categoryRequired: "카테고리를 선택해 주세요",
+          failed: "저장하지 못했어요. 다시 시도해 주세요.",
+        },
+      },
+      /** FR-012, D-007·D-002 — 오너 전용 섹션. `CrewSettingsContainer`가 `crew:update_visibility`
+       *  판정을 통과한 오너에게만 이 폼을 렌더한다. */
+      visibility: {
+        heading: "공개 범위",
+        description: "공개 범위는 오너만 바꿀 수 있어요.",
+        submit: "저장",
+        submitPending: "변경하는 중…",
+        saved: "공개 범위를 변경했어요",
+        errors: {
+          sessionExpired: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+          notAllowed: "공개 범위는 오너만 변경할 수 있어요",
+          failed: "변경하지 못했어요. 다시 시도해 주세요.",
+        },
+      },
     },
   },
 
@@ -528,10 +577,31 @@ export const ko = {
     },
   },
 
-  /** SC-20 받은 초대함 페이지. */
+  /** SC-20 받은 초대함 페이지(FR-021·028, Task 017B). */
   invitation: {
     inbox: {
       title: "받은 초대함",
+      description: "받은 초대에 응답하면 바로 크루원이 되거나 목록에서 사라져요.",
+      /** FR-021 — 대기 중인 초대가 없을 때. */
+      empty: "받은 초대가 없어요",
+      /** `{name}`은 초대를 보낸 오너·임원의 표시 이름. */
+      inviterLabel: "{name}님이 초대했어요",
+      /** `{date}`는 YYYY.MM.DD 절대 날짜(NFR-025, `formatInvitationExpiry`). */
+      expiresLabel: "{date}까지 응답할 수 있어요",
+      acceptButton: "수락",
+      declineButton: "거절",
+      errors: {
+        sessionExpired: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+        notAllowed: "이 초대에 응답할 권한이 없어요",
+        /** 초대 id가 존재하지 않거나 본인 앞으로 온 초대가 아닌 경우(위조 시도 방어 포함). */
+        notFound: "그 초대를 찾을 수 없어요",
+        /** `lib/rules/invitation-response-eligibility.ts`의 `InvitationResponseIneligibleReason`과
+         *  키를 맞췄다. */
+        already_responded: "이미 응답한 초대예요",
+        crew_unavailable: "이 크루는 더 이상 존재하지 않아요",
+        expired: "만료된 초대예요",
+        failed: "처리하지 못했어요. 다시 시도해 주세요.",
+      },
     },
   },
 
@@ -753,6 +823,11 @@ export const ko = {
        *  스피너 하나뿐이라(색·타임스탬프 자리만 바뀐다) 보조기술 사용자에게는 이 문구가 유일한
        *  신호다(NFR-021). */
       sending: "전송 중…",
+      /** 10일차 접근성 QA(Task 024, NFR-021 "새 메시지"). 실시간으로 도착한 상대방 메시지를
+       *  스크린 리더에 알리는 시각적으로 숨겨진 live region 문구(`MessageList.tsx`). 본문을
+       *  그대로 다시 읽지 않는다 — 말풍선 자체와 이중 낭독을 피하고, 게시글 공유 카드처럼
+       *  본문(`body`)이 없는 메시지 유형도 있어서다. */
+      newMessageAnnouncement: "{name}님이 새 메시지를 보냈어요",
       /** Task 020B — 실패한 말풍선의 재전송 버튼(FR-051 E1 "실패 표시 + 재전송 버튼"). 폼 상단
        *  경고(`errors.sendFailed`)와 별도 문구를 쓴다 — 이건 메시지 하나에 붙는 인라인 라벨이지
        *  경고 배너가 아니다. */

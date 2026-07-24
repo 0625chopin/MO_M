@@ -187,7 +187,12 @@
      `text-destructive`로 본문에 직접 쓰이는 색이라 여유를 뒀다. */
   --destructive: oklch(0.52 0.21 27);
   --border: oklch(0.9 0.007 258);
-  --input: oklch(0.88 0.009 258);
+  /* 3.37 — **기존 `oklch(0.88 0.009 258)`는 흰 배경 대비 1.43로 3:1(NFR-018
+     비텍스트) 미달이었다.** `border-input`이 Input·Textarea·Select·Checkbox·
+     RadioGroup·Tabs의 유일한 경계선이라(배경이 `bg-transparent`) 여기서 고쳤다
+     (10일차 접근성 QA 패스, Task 024). 다크는 이미 12.47로 여유가 있어 그대로
+     둔다 — `bg-input/*` 채움은 전부 `dark:` 접두만 쓰여 라이트에는 영향 없다. */
+  --input: oklch(0.64 0.009 258);
   /* 7.43 — **기존 `oklch(0.708 0 0)`은 흰 배경 대비 2.59로 3:1 미달이었다.**
      포커스 표시자는 WCAG 2.2(2.4.11)·NFR-020의 대상이라 개편에서 고쳤다.
      크루 파랑(crew-9 `#007af5`)과 혼동되지 않도록 채도는 0.02로 묶고 명도로만

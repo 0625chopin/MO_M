@@ -34,7 +34,10 @@ export function HomeCalendarSummary({ items, error, className }: HomeCalendarSum
         <h2 className="text-base font-semibold text-foreground">
           {strings.home.dashboard.upcoming.title}
         </h2>
-        <Link href="/calendar" className="text-sm text-primary hover:underline">
+        <Link
+          href="/calendar"
+          className="inline-flex items-center py-1 text-sm text-primary hover:underline"
+        >
           {strings.home.dashboard.upcoming.viewAll}
         </Link>
       </div>

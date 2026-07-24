@@ -1,6 +1,7 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 
 // ---------------------------------------------------------------------------
 // Task 001 (CORE, 1주차) — 디렉터리 구조·명명 규약과 짝을 이루는 import 경계 규칙.
@@ -53,6 +54,16 @@ const noRealtimeLayer = {
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+
+  // Task 024(DESIGN, 10일차) — 접근성 자동화 검증 도입 결정(R-002 근거,
+  // docs/decisions/accessibility-tooling.md). `eslint-config-next/core-web-vitals`가 이미
+  // `jsx-a11y` 6개 규칙만 부분 배선해 두었던 것을 `flatConfigs.recommended`(34개 규칙)로
+  // 확장한다 — 새 패키지 설치가 아니라(`eslint-plugin-jsx-a11y`는 `eslint-config-next`의
+  // 전이 의존성으로 이미 설치돼 있었다) 이미 있던 것을 온전히 켜는 결정이다. `plugins` 키는
+  // 뺀다 — `nextVitals`가 이미 같은 "jsx-a11y" 이름으로 플러그인을 등록해서 다시 선언하면
+  // flat config가 "Cannot redefine plugin"으로 거부한다. `rules`만 가져와 얹는다. axe-core
+  // 같은 런타임 검증은 테스트 러너가 없어(R-002) 도입하지 않는다 — 결정 문서 참고.
+  { rules: jsxA11y.flatConfigs.recommended.rules },
 
   // 공통: import 정렬 — 상대·별칭 경로 혼용을 눈에 띄게 한다 (R-007 신호).
   {

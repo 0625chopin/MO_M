@@ -21,6 +21,11 @@ export interface PollTallyProps {
  * 여부와 무관하게 항상 볼 수 있는 것은 참여자 "수"뿐이다. `showDetailed` 자체는
  * `lib/rules/poll-tally-visibility.ts`의 `shouldShowDetailedTally`가 판정해 컨테이너가
  * 넘긴다 — 이 컴포넌트는 그 결과를 분기만 한다(판정을 다시 하지 않는다, NFR-036).
+ *
+ * **10일차 접근성 QA(Task 024, NFR-021 "투표 집계")**: 루트에 `aria-live="polite"`를
+ * 둔다 — 실시간 구독으로 표가 들어와 이 블록이 다시 그려질 때마다 참여자 수·정족수 배지가
+ * 스크린 리더에도 갱신 안내된다. 블록 하나가 작아 통째로 다시 읽혀도 소음이 되지 않는다
+ * (채팅 메시지 목록처럼 계속 자라는 목록과 달리 `aria-atomic`으로 묶어도 안전하다).
  */
 export function PollTally({
   tally,
@@ -31,7 +36,11 @@ export function PollTally({
   showDetailed,
 }: PollTallyProps) {
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
+    <div
+      aria-live="polite"
+      aria-atomic="true"
+      className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm tnum">
           {t((s) => s.vote.summary.participants, { voted: votedCount, total: eligibleVoterCount })}
