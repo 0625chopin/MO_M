@@ -26,6 +26,14 @@
   `resetMockRealtimeState`는 전역 Mock 상태 초기화용(테스트 러너 도입 전 수동 확인용). 이
   네 함수는 배럴(`index.ts`)에서도 그대로 재노출된다 — 실제 export명이며 `emit` 같은
   함수는 없다.
+  - **7일차, I-042**: `publishMockEvent`/`publishMockError`는 **브라우저 쪽에서만** 호출한다
+    — Server Action 안에서 부르면 서버·클라이언트 번들의 `rooms` Map이 분리돼 있어 구독자
+    0명인 곳에 발행되고 조용히 사라진다(`tsc`·`lint` 둘 다 못 잡는 런타임 전용 결함,
+    실제로 발생했다). 자세한 경위·올바른 패턴은 `mock.ts` 모듈 docstring 참고.
+  - **구조적 한계(버그 아님)**: 이 Mock 구현엔 전송 계층 자체가 없어 **탭 간·사용자 간
+    전달이 원천적으로 불가능**하다 — 발행자 자신의 구독만 되받는다. Task 033(Broadcast
+    연결)이 이 간극을 메운다. 흉내 내는 코드(`BroadcastChannel` 등)를 추가하지 않는다 —
+    실데이터 전환 때 걷어내야 할 임시 계층이 된다.
 - **`broadcast.ts`**: 실데이터 단계 자리 — Supabase Realtime **Broadcast**(D-023, Postgres
   Changes 아님 — 팬아웃 확장성 근거는 R-011 참고). `@supabase/supabase-js`를 직접 import할 수
   있는 몇 안 되는 위치 중 하나다(`src/lib/data/supabase/`와 함께). **이번 회차에는 함수

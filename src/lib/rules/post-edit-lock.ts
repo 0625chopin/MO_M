@@ -15,7 +15,21 @@
 
 import type { PostType } from "@/lib/types";
 
-/** 게시글 수정 화면·Server Action이 다루는 필드 전부. `meetupDate`는 `meetup_proposal`에서만 의미 있다. */
+/**
+ * 게시글 수정 화면·Server Action이 다루는 필드 전부. `meetupDate`는 `meetup_proposal`에서만 의미 있다.
+ *
+ * **`startTime`·`place`·`capacity`(D-013, Task 018B가 `Post`에 추가한 선택 입력 3종)는 의도적으로
+ * 뺐다** — 이 유니온은 "잠금 대상이 될 수 있는 필드"를 열거하는데, 이 3필드는 애초에 편집 경로
+ * 자체가 없다. `UpdatePostInput`(`lib/data/mock/board.ts`)이 `title`·`body`만 받고,
+ * `PostActions.tsx`(018A 인라인 편집 폼)도 이 셋을 다루지 않는다 — 작성 후에 시작 시각·장소·
+ * 정원을 바꾸는 화면 자체가 아직 없다(가결 전 변경은 FR-032 범위 밖, 가결 후 변경은 FR-065
+ * `meetup:cancel_or_update`로 별개 액션·별개 대상(`Meetup`, `Post` 아님)이다). "잠글 대상"이
+ * 없으니 "잠갔다/안 잠갔다"를 표현할 필요도 없다 — 유니온에 추가하면 아무도 호출하지 않는
+ * `isPostFieldEditable(type, "startTime")` 같은 죽은 조합만 늘어난다. 이 3필드를 다루는 편집
+ * 화면이 생기면(가결 전 정정 등) 그때 유니온에 추가하고 `getLockedPostFields`의 규칙도 함께
+ * 정한다 — 지금은 "제외"가 "누락"이 아니라는 근거만 여기 남긴다(7일차 CREW·CORE 교차검증 동시
+ * 지적).
+ */
 export type PostEditableField = "title" | "body" | "meetupDate";
 
 /**

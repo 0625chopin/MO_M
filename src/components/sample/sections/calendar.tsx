@@ -1,22 +1,26 @@
-import type { CalendarDayData } from "@/components/calendar/calendar-types";
+import type { CalendarDayData, CalendarMeetupDetail } from "@/components/calendar/calendar-types";
 import { MAX_VISIBLE_BARS_PER_DAY } from "@/components/calendar/calendar-types";
+import { CrewFilterPanel } from "@/components/calendar/CrewFilterPanel";
+import { CrewLegend } from "@/components/calendar/CrewLegend";
 import {
   buildMonthWeeks,
   type BareCalendarDay,
 } from "@/components/calendar/date-grid";
+import { HomeCalendarSummary } from "@/components/calendar/HomeCalendarSummary";
+import { HomeCalendarSummarySkeleton } from "@/components/calendar/HomeCalendarSummarySkeleton";
 import { MeetupBar } from "@/components/calendar/MeetupBar";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
+import { MonthCalendarSkeleton } from "@/components/calendar/MonthCalendarSkeleton";
 import { PreviewFrame } from "@/components/sample/PreviewFrame";
+import { DayDetailPanelPreview } from "@/components/sample/sections/DayDetailPanelPreview";
 import { defineSection } from "@/components/sample/showcase-types";
 import { ErrorState } from "@/components/ui/error-state";
-import { Skeleton } from "@/components/ui/skeleton";
 import { resolveCrewColorCollision } from "@/lib/rules/crew-color-hash";
 import { strings } from "@/lib/strings";
 
 /**
- * 통합 캘린더 격자 + Meetup 막대(FR-060~063) — Task 021A. 이 파일은 서버 컴포넌트라 클라이언트
- * 컴포넌트(`MonthCalendar`·`ErrorState`)에 함수 prop을 넘길 수 없다(`primitives.tsx`의
- * `ErrorState` 데모와 같은 이유) — 데이터만 준비해서 내려준다.
+ * 통합 캘린더 격자 + Meetup 막대(FR-060~063) — Task 021A. 크루 필터·`CrewLegend`·
+ * `DayDetailPanel`·홈 대시보드 캘린더 요약(Task 021B)이 이 섹션에 이어서 등록됐다.
  *
  * **색은 여기서도 계산하지 않는다** — 실제 계산은 `resolveCrewColorCollision`
  * (`lib/rules/crew-color-hash.ts`, D-026)이 아래 모듈 스코프에서 한 번 끝내고,
@@ -43,53 +47,87 @@ const hikingResolvedIndex = resolveCrewColorCollision(HIKING_CREW_BASE_INDEX, [
 ]);
 
 function emptyDay(day: BareCalendarDay): CalendarDayData {
-  return { ...day, bars: [], overflowCount: 0, allMeetupSummaries: [] };
+  return { ...day, bars: [], overflowCount: 0, meetups: [] };
 }
 
 const baseWeeks = buildMonthWeeks(DEMO_YEAR, DEMO_MONTH, DEMO_TODAY_ISO);
 
+const RUNNING_MEETUP: CalendarMeetupDetail = {
+  id: "demo-meetup-running",
+  crewId: "demo-crew-running",
+  crewName: "새벽 러닝 크루",
+  title: "한강 5km 정기런",
+  colorIndex: RUNNING_CREW_BASE_INDEX,
+  startTime: "07:00",
+  place: "한강공원 반포지구",
+  attendingCount: 12,
+  capacity: 20,
+  isCancelled: false,
+  postHref: "#",
+};
+
+const HIKING_MEETUP: CalendarMeetupDetail = {
+  id: "demo-meetup-hiking",
+  crewId: "demo-crew-hiking",
+  crewName: "주말 등산 모임",
+  title: "북한산 둘레길 완주",
+  colorIndex: hikingResolvedIndex,
+  startTime: "09:00",
+  place: "북한산 둘레길",
+  attendingCount: 6,
+  capacity: null,
+  isCancelled: false,
+  postHref: "#",
+};
+
+const OVERFLOW_MEETUPS: CalendarMeetupDetail[] = [
+  { crewName: "보드게임 소모임", title: "월례 정기모임" },
+  { crewName: "사진 동호회", title: "야경 출사" },
+  { crewName: "북클럽", title: "8월 지정 도서 토론" },
+  { crewName: "스터디 크루", title: "알고리즘 스터디" },
+  { crewName: "홈베이킹 모임", title: "레시피 공유회" },
+].map((m, index) => ({
+  id: `demo-overflow-${index}`,
+  crewId: `demo-crew-overflow-${index}`,
+  crewName: m.crewName,
+  title: m.title,
+  colorIndex: (index * 2) % 12,
+  startTime: "19:00",
+  place: "정기 모임 장소",
+  attendingCount: 4,
+  capacity: 10,
+  isCancelled: false,
+  postHref: "#",
+}));
+
 const populatedWeeks: CalendarDayData[][] = baseWeeks.map((week) =>
   week.map((day): CalendarDayData => {
     if (day.iso === "2026-08-14") {
-      const bars = [
-        {
-          id: "demo-meetup-running",
-          crewName: "새벽 러닝 크루",
-          title: "한강 5km 정기런",
-          colorIndex: RUNNING_CREW_BASE_INDEX,
-        },
-        {
-          id: "demo-meetup-hiking",
-          crewName: "주말 등산 모임",
-          title: "북한산 둘레길 완주",
-          colorIndex: hikingResolvedIndex,
-        },
-      ];
+      const meetups = [RUNNING_MEETUP, HIKING_MEETUP];
       return {
         ...day,
-        bars,
+        bars: meetups.map(({ id, crewName, title, colorIndex }) => ({
+          id,
+          crewName,
+          title,
+          colorIndex,
+        })),
         overflowCount: 0,
-        allMeetupSummaries: bars.map(({ crewName, title }) => ({ crewName, title })),
+        meetups,
       };
     }
     if (day.iso === "2026-08-20") {
-      const all = [
-        { crewName: "보드게임 소모임", title: "월례 정기모임" },
-        { crewName: "사진 동호회", title: "야경 출사" },
-        { crewName: "북클럽", title: "8월 지정 도서 토론" },
-        { crewName: "스터디 크루", title: "알고리즘 스터디" },
-        { crewName: "홈베이킹 모임", title: "레시피 공유회" },
-      ];
-      const bars = all.slice(0, MAX_VISIBLE_BARS_PER_DAY).map((meetup, index) => ({
-        id: `demo-overflow-${index}`,
-        ...meetup,
-        colorIndex: (index * 2) % 12,
-      }));
+      const visible = OVERFLOW_MEETUPS.slice(0, MAX_VISIBLE_BARS_PER_DAY);
       return {
         ...day,
-        bars,
-        overflowCount: all.length - MAX_VISIBLE_BARS_PER_DAY,
-        allMeetupSummaries: all,
+        bars: visible.map(({ id, crewName, title, colorIndex }) => ({
+          id,
+          crewName,
+          title,
+          colorIndex,
+        })),
+        overflowCount: OVERFLOW_MEETUPS.length - MAX_VISIBLE_BARS_PER_DAY,
+        meetups: OVERFLOW_MEETUPS,
       };
     }
     return emptyDay(day);
@@ -98,20 +136,48 @@ const populatedWeeks: CalendarDayData[][] = baseWeeks.map((week) =>
 
 const emptyWeeks: CalendarDayData[][] = baseWeeks.map((week) => week.map(emptyDay));
 
+const DEMO_CREW_FILTER_OPTIONS = [
+  { id: "demo-crew-running", name: "새벽 러닝 크루", colorIndex: RUNNING_CREW_BASE_INDEX },
+  { id: "demo-crew-hiking", name: "주말 등산 모임", colorIndex: hikingResolvedIndex },
+  { id: "demo-crew-boardgame", name: "보드게임 소모임", colorIndex: 9 },
+  { id: "demo-crew-book", name: "북클럽", colorIndex: 3 },
+];
+
+const DEMO_UPCOMING_MEETUPS = [
+  {
+    id: "demo-upcoming-1",
+    crewName: "새벽 러닝 크루",
+    colorIndex: RUNNING_CREW_BASE_INDEX,
+    title: "한강 5km 정기런",
+    dateLabel: "8월 14일(금)",
+    startTime: "07:00",
+    postHref: "#",
+  },
+  {
+    id: "demo-upcoming-2",
+    crewName: "주말 등산 모임",
+    colorIndex: hikingResolvedIndex,
+    title: "북한산 둘레길 완주",
+    dateLabel: "8월 16일(일)",
+    startTime: "09:00",
+    postHref: "#",
+  },
+];
+
 export const calendarSection = defineSection({
   id: "calendar",
   label: "캘린더",
-  title: "캘린더 — MonthCalendar · MeetupBar",
+  title: "캘린더 — MonthCalendar · 크루 필터 · DayDetailPanel · 홈 요약",
   description: (
     <>
-      통합 캘린더 월간 격자와 Meetup 막대입니다(FR-060~063, Task 021A). 크루 필터·날짜 상세
-      패널·홈 대시보드는 다음 회차(Task 021B) 몫이라 이 섹션에는 없습니다.
+      통합 캘린더 월간 격자·Meetup 막대(FR-060~063, Task 021A)에 크루 필터·`CrewLegend`·
+      `DayDetailPanel`·홈 대시보드 캘린더 요약(Task 021B)이 이어서 등록됐습니다.
     </>
   ),
   items: [
     {
       name: "MonthCalendar",
-      note: "프리뷰 프레임 폭을 360으로 내려도 가로 스크롤이 없어야 합니다(NFR-005·026). 날짜 셀에 포커스를 두고 방향키·Home·End로 이동해 보세요(roving tabindex, NFR-020). 8/14는 두 크루가 같은 팔레트 버킷에 강제로 충돌한 뒤 D-026 회피 워크로 서로 다른 색을 받은 예시이고, 8/20은 Meetup 5건 중 3개 + \"+2\"로 요약되는 오버플로 예시입니다.",
+      note: "프리뷰 프레임 폭을 360으로 내려도 가로 스크롤이 없어야 합니다(NFR-005·026). 날짜 셀에 포커스를 두고 방향키·Home·End로 이동해 보세요(roving tabindex, NFR-020). 8/14 셀을 클릭하거나 포커스 후 Enter/Space를 누르면 DayDetailPanel이 열립니다 — 두 크루가 같은 팔레트 버킷에 강제로 충돌한 뒤 D-026 회피 워크로 서로 다른 색을 받은 예시이기도 합니다. 8/20은 Meetup 5건 중 3개 + \"+2\"로 요약되는 오버플로 예시입니다.",
       panels: {
         default: (
           <PreviewFrame height={520} resizable>
@@ -128,19 +194,12 @@ export const calendarSection = defineSection({
         ),
         loading: (
           <PreviewFrame height={520} resizable>
-            <div className="flex flex-col gap-3 p-3" aria-busy="true">
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-5 w-24" />
-                <div className="flex gap-1">
-                  <Skeleton className="size-7 rounded-lg" />
-                  <Skeleton className="size-7 rounded-lg" />
-                </div>
-              </div>
-              <div className="grid grid-cols-7 gap-1">
-                {Array.from({ length: 42 }, (_, index) => (
-                  <Skeleton key={index} className="h-16 rounded-md" />
-                ))}
-              </div>
+            <div className="p-3">
+              {/* Suspense fallback과 같은 컴포넌트(CORE 재검증 지적, 7일차) — 예전엔 이 자리에
+               *  손그림 스켈레톤 JSX가 따로 있었고, 실제 `/calendar` 라우트에는 Suspense 자체가
+               *  없었다(`board`·`chat`은 이미 갖췄던 것과 달랐다). `MonthCalendarSkeleton.tsx`로
+               *  뽑아 두 곳이 같은 모양을 그린다. */}
+              <MonthCalendarSkeleton />
             </div>
           </PreviewFrame>
         ),
@@ -198,6 +257,60 @@ export const calendarSection = defineSection({
           />
         </div>
       ),
+    },
+    {
+      name: "CrewLegend",
+      note: "색 스와치 + 크루명(D-026 — 색은 보조 신호일 뿐이라 텍스트 라벨을 항상 병기합니다). dimmed는 필터에서 꺼진 크루를 흐리게 보여줄 때 씁니다.",
+      content: (
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-background p-3">
+          <CrewLegend crewName="새벽 러닝 크루" colorIndex={RUNNING_CREW_BASE_INDEX} />
+          <CrewLegend crewName="주말 등산 모임" colorIndex={hikingResolvedIndex} />
+          <CrewLegend crewName="꺼진 크루(dimmed)" colorIndex={9} dimmed />
+        </div>
+      ),
+    },
+    {
+      name: "CrewFilterPanel",
+      note: "체크박스를 토글하면 즉시 로컬 상태로 반영되고 선택이 쿠키에 저장된 뒤 실제로 `router.refresh()`가 호출됩니다(FR-061 AC5) — 이 프리뷰(이 `/sample` 페이지 자체)가 짧게 재조회되는 동안 제목 옆에 스피너가 뜨는 것을 볼 수 있습니다(`isPending`, CREW 021B 재검증에서 지적됨 — 처음엔 이 값을 버려서 실재하는 pending 상태가 화면에 안 보였습니다). 다만 여기서는 크루 데이터가 바뀌지 않으므로 재조회 후 눈에 보이는 내용 변화는 없습니다(실제 `/calendar`에서는 격자가 좁혀집니다). '오류' 상태가 없는 이유: 이 컴포넌트 자신은 조회를 하지 않고 재조회를 요청만 하며, 요청 실패는 이 컴포넌트가 아니라 페이지·라우트 레벨(`error.tsx`)에서 드러난다 — 소속 크루가 0개인 경우는 호출부(`MonthCalendarContainer`)가 아예 렌더하지 않도록 걸러 둡니다.",
+      content: (
+        <div className="max-w-xs rounded-lg border border-border bg-background p-3">
+          <CrewFilterPanel
+            crews={DEMO_CREW_FILTER_OPTIONS}
+            initialSelectedCrewIds={DEMO_CREW_FILTER_OPTIONS.map((c) => c.id)}
+          />
+        </div>
+      ),
+    },
+    {
+      name: "DayDetailPanel",
+      note: "데스크톱(≥768px)에서는 오른쪽 사이드 패널로, 좁은 화면(<768px)에서는 하단 바텀시트로 뜹니다 — 브라우저 창 폭을 실제로 바꿔 확인해 주세요(PreviewFrame 폭 토글은 컨테이너 쿼리 기준이라 이 판정에는 반영되지 않습니다, `PreviewFrame.tsx` 주석 참고). Esc로 닫히고 포커스가 트리거 버튼으로 돌아오는지, 취소된 Meetup에 배지가 붙는지 확인해 주세요. 버튼 4개가 기본·빈·로딩·오류 4상태와 1:1 대응합니다 — 로딩·오류는 `status` prop으로 강제한 정적 스냅샷이고(`/sample` 전용, `DayDetailPanel.tsx` 모듈 docstring 참고) 실제 호출부(`MonthCalendar.tsx`)는 이 값을 만들지 않습니다.",
+      content: <DayDetailPanelPreview />,
+    },
+    {
+      name: "HomeCalendarSummary",
+      note: "홈 대시보드의 \"다가오는 모임\" 요약입니다(SC-06 전체가 아니라 이 목록 하나만 Task 021B 범위입니다). '로딩'은 이제 `/home` 라우트의 실제 Suspense fallback과 같은 컴포넌트입니다(CORE 재검증 지적, 7일차 — 이전엔 이 상태 자체가 등록돼 있지 않았고 실제 라우트에도 Suspense가 없었습니다).",
+      panels: {
+        default: (
+          <div className="max-w-sm">
+            <HomeCalendarSummary items={DEMO_UPCOMING_MEETUPS} />
+          </div>
+        ),
+        loading: (
+          <div className="max-w-sm">
+            <HomeCalendarSummarySkeleton />
+          </div>
+        ),
+        empty: (
+          <div className="max-w-sm">
+            <HomeCalendarSummary items={[]} />
+          </div>
+        ),
+        error: (
+          <div className="max-w-sm">
+            <HomeCalendarSummary items={[]} error />
+          </div>
+        ),
+      },
     },
   ],
 });

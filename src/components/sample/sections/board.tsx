@@ -1,24 +1,33 @@
+import { Loader2Icon } from "lucide-react";
+
 import type { BoardPostSummary, PostDetailViewModel } from "@/components/board/board-view-models";
 import { BoardList } from "@/components/board/BoardList";
 import { BoardListSkeleton } from "@/components/board/BoardListSkeleton";
 import { PostDeletedNotice } from "@/components/board/PostDeletedNotice";
 import { PostDetail } from "@/components/board/PostDetail";
 import { PostDetailSkeleton } from "@/components/board/PostDetailSkeleton";
+import { PostWriteForm } from "@/components/board/PostWriteForm";
 import type { RouteErrorKind } from "@/components/errors/route-error-kind";
 import { RouteErrorBoundaryPreview } from "@/components/errors/RouteErrorBoundaryPreview";
 import { PreviewFrame } from "@/components/sample/PreviewFrame";
 import { BoardErrorStatePreview } from "@/components/sample/sections/BoardErrorStatePreview";
 import { defineSection } from "@/components/sample/showcase-types";
+import { Button } from "@/components/ui/button";
+import { strings } from "@/lib/strings";
 
 /**
- * Task 018A — 게시판 목록·게시글 상세(FR-031·032). `BoardList`·`PostDetail`은 순수 표현
- * 컴포넌트라 `lib/data`를 참조하지 않는다(D-030 ①) — 아래 고정 데이터는 실제 컨테이너
- * (`BoardListContainer`·`PostDetailContainer`)가 만드는 조인 결과 모양을 그대로 손으로
- * 채운 것이다. 실제 화면은 `/crews/[crewId]/board`·`/crews/[crewId]/board/[postId]`.
+ * Task 018A — 게시판 목록·게시글 상세(FR-031·032) + Task 018B — 글쓰기(FR-030·034).
+ * `BoardList`·`PostDetail`은 순수 표현 컴포넌트라 `lib/data`를 참조하지 않는다(D-030 ①) —
+ * 아래 고정 데이터는 실제 컨테이너(`BoardListContainer`·`PostDetailContainer`)가 만드는
+ * 조인 결과 모양을 그대로 손으로 채운 것이다. `PostWriteForm`은 표현/컨테이너 구분 없이
+ * 그 자체가 클라이언트 경계다(`PostActions`와 같은 이유, `create-post.ts` 참고) — 여기서는
+ * 실제 컴포넌트를 그대로 등록했다(`CrewCreateForm`과 같은 패턴). 실제 화면은
+ * `/crews/[crewId]/board`·`/crews/[crewId]/board/[postId]`·`/crews/[crewId]/board/new`.
  *
- * "오류" 상태에는 네트워크 실패뿐 아니라 도메인 오류 3종을 각각 별도 항목으로 등록한다
- * (D-030 ③): **RLS 403**(비소속 크루의 `board:read` 거부) · **삭제된 글 접근**(FR-032 AC4) ·
- * **잠금 규칙**(FR-032 AC2 — 모임 제안글의 예정일은 투표와 동시 생성되어 항상 잠긴다, D-035).
+ * "오류" 상태에는 네트워크 실패뿐 아니라 도메인 오류 4종을 각각 별도 항목으로 등록한다
+ * (D-030 ③): **RLS 403**(비소속 크루의 `board:read` 거부) · **글쓰기 권한 없음**
+ * (`post:create` 거부) · **삭제된 글 접근**(FR-032 AC4) · **잠금 규칙**(FR-032 AC2 — 모임
+ * 제안글의 예정일은 투표와 동시 생성되어 항상 잠긴다, D-035).
  */
 
 const SAMPLE_POSTS: BoardPostSummary[] = [
@@ -78,14 +87,19 @@ const DOMAIN_ERROR_ITEMS: Array<{ kind: RouteErrorKind; name: string; note: stri
     name: "게시판 접근 권한 없음 (RLS 403)",
     note: "board:read 판정 거부 — 비소속 크루의 게시판에 접근하면 이 화면이 뜬다(lib/rules/permission.ts, BoardListContainer/PostDetailContainer가 던지고 error.tsx가 받는다).",
   },
+  {
+    kind: "forbidden",
+    name: "글쓰기 권한 없음 (post:create 거부)",
+    note: "PostWriteContainer가 던진다(Task 018B) — (app)/crews/[crewId]/layout.tsx(D-039)가 크루원 여부를 이미 걸렀지만, Server Component가 다른 경로로 렌더될 가능성에 대한 방어로 컨테이너가 다시 판정한다. 실제 화면 결과는 위 게시판 접근 항목과 같다(둘 다 kind='forbidden').",
+  },
 ];
 
 export const boardSection = defineSection({
   id: "board",
   label: "게시판",
-  title: "게시판 목록·게시글 상세",
+  title: "게시판 목록·글쓰기·게시글 상세",
   description:
-    "SC-10·SC-12(FR-031·032). 목록은 유형·투표 상태 배지 + 20건 페이지네이션(AC2), 상세는 본문 · 수정/삭제 · 모임 제안글의 잠금 규칙(D-035)을 다룹니다. 투표 참여 UI 자체는 Task 019 몫이라 상태 배지만 보여줍니다.",
+    "SC-10·SC-11·SC-12(FR-030·031·032·034). 목록은 유형·투표 상태 배지 + 20건 페이지네이션(AC2), 글쓰기는 유형 토글 · 모임 제안글 필드 6종 · 날짜 검증(D-013) · 임시 저장/초안 복구, 상세는 본문 · 수정/삭제 · 모임 제안글의 잠금 규칙(D-035)을 다룹니다. 투표 참여 UI 자체는 Task 019 몫이라 상태 배지만 보여줍니다.",
   items: [
     {
       name: "게시판 목록 (BoardList)",
@@ -153,6 +167,29 @@ export const boardSection = defineSection({
                 canWrite={false}
                 writeHref="/crews/crew-1/board/new"
               />
+            </div>
+          </PreviewFrame>
+        ),
+      },
+    },
+    {
+      name: "글쓰기 (PostWriteForm)",
+      note: "실제 컴포넌트입니다(Task 018B). 유형 토글로 모임 제안글 필드 6종(예정일·투표 마감·시작 시각·장소·정원)이 나타납니다. /sample은 게스트 세션이라 제출하면 접근 권한 오류로 막힙니다(CrewCreateForm과 같은 패턴) — checkPermission이 실제로 작동한다는 증거입니다. 새로고침 후 다시 열면 입력 중이던 내용이 로컬 저장소에서 복구됩니다(AC2).",
+      panels: {
+        default: (
+          <PreviewFrame height={720}>
+            <div className="mx-auto w-full max-w-md p-4">
+              <PostWriteForm crewId="crew-1" />
+            </div>
+          </PreviewFrame>
+        ),
+        loading: (
+          <PreviewFrame height={120}>
+            <div className="mx-auto flex w-full max-w-md justify-center p-4">
+              <Button disabled className="w-full">
+                <Loader2Icon aria-hidden="true" className="animate-spin" />
+                {strings.board.write.submitPending}
+              </Button>
             </div>
           </PreviewFrame>
         ),

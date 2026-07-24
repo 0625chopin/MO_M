@@ -58,6 +58,23 @@
 
 자세한 배치 원칙은 [`docs/CONVENTIONS.md`](../../../docs/CONVENTIONS.md) 참고.
 
+## 크루 개설·가입 신청 (CREW, Task 016B, 7일차)
+
+- **`crew-name-validation.ts`** — `validateCrewName`(길이·금칙어). 상한·금칙어 목록 둘 다
+  요구사항에 근거가 없는 잠정값이다(I-038).
+- **`crew-description-validation.ts`** — `validateCrewDescription`(필수·길이). 상한은 잠정값
+  (I-038).
+- **`crew-category.ts`** — `CREW_CATEGORIES`(고정 5개 taxonomy)·`isValidCrewCategory`. 개설 폼과
+  Task 016A(크루 탐색) 카테고리 필터가 같은 목록을 공유해야 어긋나지 않는다.
+- **`join-request-eligibility.ts`** — `evaluateJoinRequestEligibility`. FR-022 사전조건(공개
+  범위)·예외 흐름(중복 신청·강퇴 이력)을 판정한다. `request-join-crew.ts`(Server Action)와
+  `join-request-button-state.ts`(아래) 둘 다 이 함수를 호출해 같은 기준으로 "신청 가능한가"를
+  판정한다.
+- **`join-request-button-state.ts`** — `resolveJoinRequestButtonState`. 크루 홈의 "가입 신청
+  버튼 상태 기계"(ROADMAP) 그 자체 — 세션 인증 여부·크루 공개 범위·멤버십을 조합해 버튼이
+  어떤 모습이어야 하는지(`kind`)만 반환한다. `evaluateJoinRequestEligibility`를 재사용해
+  판정을 중복 구현하지 않는다.
+
 ## 투표·정족수·타임존 (BOARD, Task 009A, 3일차)
 
 - **`quorum.ts`** — `computeQuorum`(D-032 `ceil(대상자 수/3)`), `countVotedForQuorum`(D-003 기권
@@ -75,5 +92,29 @@
   `validatePollDuration`·`isPollClosingBeforeMeetupDate`(NFR-025, D-003 기한 범위·Meetup
   예정일 순서). epoch 비교와 `Intl.DateTimeFormat`만 쓰고 외부 라이브러리는 도입하지 않았다.
 
+## 게시판 글쓰기 (BOARD, Task 018B, 7일차)
+
+- **`meetup-proposal-schedule.ts`** — `validateMeetupProposalSchedule`. FR-034 E1~E3의 날짜
+  판정을 조립한다. 타임존 경계 처리는 새로 만들지 않고 위 `poll-timezone.ts`의
+  `isPollExpired`·`isPollClosingBeforeMeetupDate`·`toZonedDateString`·`validatePollDuration`을
+  그대로 재사용한다 — 이 파일은 그 넷을 FR-034가 요구하는 순서로 호출만 한다. 고정 타임존
+  `Asia/Seoul`(v0.1 한국 단독 시장, D-011)을 기본값으로 둔다.
+- **`post-content-validation.ts`** — `validatePostContent`. FR-030 E1(제목·본문 필수)의
+  판정. 일반글·모임 제안글 공통이라 `meetup-proposal-schedule.ts`와 분리했다. 글자 수 상한은
+  요구사항에 값이 없어 두지 않았다(I-038과 같은 결).
+
 배럴(`index.ts`)은 만들지 않았다 — CREW가 같은 디렉터리에서 권한·멤버십·색 해시 파일을 동시
 작업 중이라 충돌을 피하기 위해서다. 배럴 도입 여부는 팀장이 직렬로 판단한다.
+
+## 캘린더 크루 필터 (DESIGN, Task 021B, 7일차)
+
+- **`crew-filter-selection.ts`** — `parseCrewFilterSelection`. 크루 필터 쿠키 원본(`undefined`/
+  빈 문자열/유효한 값/전부 stale 네 갈래)과 실제 소속 크루 목록을 받아 최종 선택 목록을
+  결정한다(FR-061 AC5). 처음엔 `src/components/calendar/calendar-types.ts`(plain ts 공유
+  모듈)에 있었으나, CORE 재검증에서 "`use client` 값 export 함정 회피는 `MonthCalendar.tsx`에
+  두면 안 된다는 근거는 되지만 `calendar-types.ts`에 있어야 한다는 근거는 아니다"는 지적을
+  받고 이 파일로 옮겼다 — `resolveCrewColorCollision`이 위 "crew-palette.ts와의 경계" 절에서
+  데이터 모듈→판정 모듈로 이관된 것과 같은 이유(값이 아니라 판정)다. 반대로 순수 포맷팅인
+  `serializeCrewFilterSelection`(쉼표 join, 분기 없음)은 `normalizePaletteIndex`가
+  `crew-palette.ts`에 남은 것과 같은 이유로 `calendar-types.ts`에 그대로 둔다. 판단 근거 전문은
+  `crew-filter-selection.ts` 모듈 docstring에 있다.

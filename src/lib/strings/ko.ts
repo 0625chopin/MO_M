@@ -122,19 +122,115 @@ export const ko = {
   home: {
     dashboard: {
       title: "홈 대시보드",
+      /**
+       * Task 021B — "홈 대시보드 캘린더 요약"(PRD `F030~F037` 항목, 2인일 몫). SC-06 전체
+       * (내 크루 카드·알림 미리보기 포함)는 이 Task 범위가 아니다 — 이 회차는 "다가오는
+       * 모임" 요약 하나만 채운다(ROADMAP Task 021B 산정 근거 참고, 보고서에도 이 경계를
+       * 남겼다).
+       */
+      upcoming: {
+        title: "다가오는 모임",
+        /** 요약 목록 전체를 캘린더 페이지로 잇는 링크. */
+        viewAll: "캘린더에서 모두 보기",
+        empty: "예정된 모임이 없어요",
+        errorTitle: "다가오는 모임을 불러오지 못했어요",
+        errorDescription: "네트워크 상태를 확인한 뒤 다시 시도해 주세요.",
+      },
     },
   },
 
-  /** SC-07~09, SC-14~15 크루 관련 페이지. */
+  /**
+   * SC-07~09, SC-14~15 크루 관련 페이지. `create`·`home`은 Task 016B(FR-010·011·022,
+   * D-008·D-014·D-016)가 채웠다.
+   */
   crew: {
     explore: {
       title: "크루 검색·탐색",
     },
+    /** SC-08 크루 개설 폼(F005). 색상은 D-016에 따라 묻지 않는다. */
     create: {
       title: "크루 개설",
+      description: "크루명·소개·카테고리·공개 범위만 정하면 바로 만들어져요. 색은 자동으로 배정돼요.",
+      fields: {
+        name: "크루명",
+        description: "소개",
+        category: "카테고리",
+        categoryPlaceholder: "카테고리를 선택하세요",
+        visibility: "공개 범위",
+      },
+      visibilityOptions: {
+        public: {
+          label: "공개",
+          description: "누구나 검색·소개 열람이 가능해요. 게시판·채팅·멤버 목록은 크루원만 볼 수 있어요.",
+        },
+        private: {
+          label: "비공개",
+          description: "크루원만 검색·열람할 수 있어요. 가입은 초대로만 가능해요.",
+        },
+      },
+      submit: "크루 만들기",
+      submitPending: "만드는 중…",
+      errors: {
+        /** FR-002 E3과 같은 개념(세션 만료). `account.settings.errors.sessionExpired`와 같은
+         *  문구이지만 도메인 맥락이 달라 공유하지 않는다(§4). */
+        sessionExpired: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+        nameRequired: "크루명을 입력해 주세요",
+        nameTooLong: "크루명은 30자 이하로 입력해 주세요",
+        /** `lib/rules/crew-name-validation.ts`의 `BANNED_WORDS`(I-038, 잠정 데모 목록)가
+         *  걸러낸 경우. */
+        nameBannedWord: "크루명에 사용할 수 없는 단어가 포함되어 있어요",
+        descriptionRequired: "소개를 입력해 주세요",
+        descriptionTooLong: "소개는 300자 이하로 입력해 주세요",
+        categoryRequired: "카테고리를 선택해 주세요",
+      },
     },
+    /**
+     * SC-09 크루 홈(F006·F011). `public`/`private` × 소속/비소속 4분기 화면 상태(D-007,
+     * FR-012)와 가입 신청 버튼 상태 기계(`lib/rules/join-request-button-state.ts`)의 문구다.
+     * 탭 라벨(게시판·채팅·멤버 관리·크루 설정)은 별도로 선언하지 않는다 — `nav.board`·
+     * `nav.chat`·`crew.members.title`·`crew.settings.title`과 완전히 같은 개념·문구라 그대로
+     * 참조한다(§4).
+     */
     home: {
       title: "크루 홈",
+      memberCount: "크루원 {count}명",
+      /** D-007·FR-012 AC2 — private 크루의 비소속자에게 보이는 전부. */
+      privateNotice: {
+        title: "초대 전용 크루예요",
+        description: "이 크루는 초대받은 크루원만 게시판·채팅·멤버 목록을 볼 수 있어요.",
+      },
+      join: {
+        /** FR-012 AC3 — public 크루를 보는 비로그인 방문자. */
+        guestPrompt: "가입하고 참여하기",
+        /** FR-022 정상 흐름 ② "가입 신청" 버튼. */
+        requestButton: "가입 신청",
+        /** FR-022 AC3 — 대기 중일 때 버튼 자체가 이 문구로 바뀐다(철회 겸용, 별도 버튼 아님). */
+        pendingButton: "신청 대기 중 · 철회",
+        withdrawSubmitPending: "철회하는 중…",
+        /** 이미 초대를 받은 상태 — 응답은 초대함(FR-021)에서 한다. */
+        invitedNotice: "이 크루에서 초대를 보냈어요. 받은 초대함에서 확인해 주세요.",
+        goToInvitations: "받은 초대함으로",
+        /** FR-022 E3 — 강퇴 이력으로 재신청 차단. */
+        blockedNotice: "이 크루는 재가입이 제한되어 있어요.",
+        dialogTitle: "가입 신청",
+        dialogDescription: "오너·임원 전원에게 알림이 가요. 한 줄 인사는 선택이에요.",
+        messageLabel: "한 줄 인사(선택)",
+        messagePlaceholder: "간단히 인사를 남겨보세요",
+        submit: "신청 보내기",
+        submitPending: "신청하는 중…",
+        sentNotice: "가입 신청을 보냈어요",
+        errors: {
+          sessionExpired: "로그인이 만료됐어요. 다시 로그인해 주세요.",
+          notAllowed: "가입 신청 권한이 없어요",
+          /** `lib/rules/join-request-eligibility.ts`의 `JoinRequestIneligibleReason`과
+           *  키를 맞췄다 — 판정 코드와 문구가 1:1이라 매핑 테이블을 따로 두지 않는다. */
+          private_crew: "비공개 크루는 초대로만 가입할 수 있어요",
+          already_member: "이미 가입된 크루예요",
+          already_pending: "이미 대기 중인 신청이 있어요",
+          banned: "이 크루는 재가입이 제한되어 있어요",
+          withdrawFailed: "철회하지 못했어요. 다시 시도해 주세요.",
+        },
+      },
     },
     members: {
       title: "멤버 관리",
@@ -146,7 +242,8 @@ export const ko = {
 
   /**
    * SC-16 통합 캘린더 페이지. `month.*`는 Task 021A(`MonthCalendar`·`MeetupBar`, FR-060~063)
-   * 몫이다 — 크루 필터·`DayDetailPanel`(Task 021B)의 문구는 그 회차에 이 아래 추가한다.
+   * 몫이다. `month.filter.*`(크루 필터·`CrewLegend`)·`month.detail.*`(`DayDetailPanel`)는
+   * Task 021B가 이어서 채웠다.
    */
   calendar: {
     month: {
@@ -175,6 +272,59 @@ export const ko = {
       /** D-030 ③ 도메인 오류 — 비공개 크루 캘린더 접근 등 RLS 403류(D-007·D-017). */
       forbiddenTitle: "크루 일정을 볼 권한이 없어요",
       forbiddenDescription: "비공개 크루의 캘린더는 크루원만 볼 수 있어요.",
+      /**
+       * Task 021B — 크루 필터(FR-061 AC5, D-014·R-017)와 `CrewLegend`. 소속 크루가 12개를
+       * 넘으면 팔레트 색이 반드시 겹치므로(D-014) 필터가 "있으면 편한" 기능이 아니라
+       * 색 구분이 무너졌을 때의 유일한 복구 수단이다 — 문구도 그 무게에 맞춰 "정리"가 아니라
+       * "좁혀 보기"로 잡았다.
+       */
+      filter: {
+        title: "크루 필터",
+        /** 필터 패널 전체를 감싸는 group의 `aria-label`. */
+        groupAriaLabel: "표시할 크루 선택",
+        selectAll: "전체 선택",
+        clearAll: "전체 해제",
+        /** 체크박스 하나의 접근성 이름. `{crewName}`은 이미 화면에 보이는 라벨과 같은 문구를
+         *  공유한다(중복 발화 방지 원칙은 `MeetupBar.tsx`의 title/aria-label 참고와 같다 —
+         *  다만 여기는 시각 라벨 자체가 `<label>` 텍스트라 `aria-label`을 별도로 채우지 않고
+         *  네이티브 label-for 연결만 쓴다. 이 키는 그 라벨 문구의 단일 소스로만 쓰인다). */
+        crewCheckboxLabel: "{crewName}",
+        /** FR-061 E5 — 소속 크루가 12개를 넘어 색이 반드시 겹칠 때의 안내. */
+        collisionNotice: "소속 크루가 12개를 넘어 일부는 색이 겹쳐요. 크루명으로 구분해 주세요.",
+      },
+      /**
+       * Task 021B — `DayDetailPanel`(FR-063). 데스크톱 사이드 패널·모바일 바텀시트 공통 문구.
+       * `loading`·`error`는 이 회차 기준 `/sample` 데모 전용이다(패널은 컨테이너가 이미 불러온
+       * 월간 데이터를 클릭 시 그대로 보여주는 표현 컴포넌트라 실제로 도달하지 않는다 — 아래
+       * `DayDetailPanel.tsx` 모듈 docstring 참고, `MonthCalendar`의 021A `/sample` 항목과
+       * 같은 전례).
+       */
+      detail: {
+        /** 패널 제목. `{date}`는 `formatDayLabelKo`가 만든 "8월 14일 금요일"을 그대로 받는다. */
+        title: "{date} 일정",
+        /** FR-063 E1 — 그 날짜에 Meetup이 없을 때. */
+        empty: "이 날짜에는 등록된 모임이 없어요",
+        /** FR-063 E2 — 조회 실패(이 회차는 `/sample` 데모 전용, 위 docstring 참고). */
+        errorTitle: "모임 정보를 불러오지 못했어요",
+        errorDescription: "네트워크 상태를 확인한 뒤 다시 시도해 주세요.",
+        /** FR-063 E3 — 취소된 Meetup 배지. */
+        cancelledBadge: "취소됨",
+        /** `{count}`/`{capacity}` 정원 표시(FR-064 AC3 파생). */
+        capacityLabel: "{count}/{capacity}명 참석",
+        /** 정원 제한이 없는 Meetup(capacity === null). */
+        noCapacityLabel: "{count}명 참석",
+        /** 시각 미정(`startTime === null`)일 때. */
+        timeUnset: "시각 미정",
+        /**
+         * FR-063 AC2 "원 제안글로 이동" — 항목 링크 안의 스크린 리더 전용 보조 문구(파라미터
+         * 없음). 링크의 접근성 이름 자체는 `aria-label`로 덮지 않고 카드 안 텍스트(크루명·
+         * 제목·시각 등)를 그대로 쓴다 — `aria-label`을 따로 채우면 그 풍부한 정보가 접근성
+         * 트리에서 통째로 가려진다(`MeetupBar.tsx`의 title/aria-label 상호 배타 주석과 같은
+         * 근거, W3C accname-1.2). 이 문구는 그 텍스트 끝에 `sr-only`로 덧붙어 "이동한다"는
+         * 목적지 정보만 보탠다. */
+        goToPostHint: "원 제안글로 이동",
+        close: "닫기",
+      },
     },
   },
 
@@ -308,10 +458,18 @@ export const ko = {
       draftRestoredNotice: "작성 중이던 내용을 불러왔어요",
       draftSaved: "임시 저장됨",
       submit: "등록",
+      submitPending: "등록하는 중…",
       validation: {
+        titleRequired: "제목을 입력해 주세요",
+        descriptionRequired: "설명을 입력해 주세요",
         scheduledDateInPast: "모임 예정일은 오늘 이후여야 해요",
         voteDeadlineAfterSchedule: "투표 마감은 모임 예정일 이전이어야 해요",
         voteDeadlineInPast: "투표 마감은 현재 시각 이후여야 해요",
+        /** D-003 투표 기한 허용 범위(1시간~14일) — `lib/rules/poll-timezone.ts`의
+         *  `validatePollDuration`이 판정한다. FR-034 E1~E3에는 명시되지 않았지만
+         *  모임 제안글 등록이 Poll 생성의 유일한 경로라 여기서 함께 강제한다. */
+        voteDeadlineTooShort: "투표 마감까지 최소 1시간 이상 남아야 해요",
+        voteDeadlineTooLong: "투표 기간은 최대 14일이에요",
         duplicateDateWarning:
           "같은 날짜에 이미 가결된 모임이 있어요. 그래도 등록할까요?",
       },
@@ -386,15 +544,34 @@ export const ko = {
   chat: {
     room: {
       title: "채팅방",
+      /** FR-050 AC1 — 크루 개설 직후 채팅방은 이미 존재하지만 메시지가 없는 빈 상태. */
+      empty: "아직 대화가 없어요. 첫 메시지를 보내보세요!",
+      /** Task 020A — 실시간 구독 자체의 실패(D-030 ③ 도메인 오류). Mock 단계에서는
+       *  `/sample` 데모 토글로만 발생하고 실제 앱 흐름에서는 나타나지 않는다(`broadcast.ts`가
+       *  아직 배럴에 조립되지 않아서다) — Task 020B의 ConnectionBanner가 이 자리를 이어받는다. */
+      connectionErrorTitle: "실시간 연결에 문제가 발생했어요",
+      connectionErrorDescription: "새로고침하면 놓친 메시지를 다시 불러올 수 있어요.",
+      loadingEarlier: "이전 메시지를 불러오는 중…",
     },
     postCard: {
       deletedPost: common.post.deleted,
       otherCrewPost: "다른 크루의 게시글이에요",
+      /** Task 020A는 게시글 링크 메시지를 유형만 구분해 자리표시자로 보여준다 — 제목·작성자·
+       *  투표 상태가 담긴 실제 카드(FR-052)는 Task 020C(PostLinkCard)가 채운다. */
+      linkedPost: "게시글 공유",
     },
     message: {
       deleted: "삭제된 메시지입니다",
       send: "전송",
       inputPlaceholder: "메시지를 입력하세요",
+      errors: {
+        /** FR-051 E4. */
+        tooLong: "메시지는 {max}자 이내로 입력해 주세요",
+        empty: "보낼 메시지를 입력해 주세요",
+        /** FR-051 E1. 권한 거부·방 불일치 등 서버측 실패도 이 문구로 뭉뚱그린다 — 로그인
+         *  실패(genericError)와 같은 이유로 어느 지점이 막혔는지 굳이 구분해 알려주지 않는다. */
+        sendFailed: "메시지를 보내지 못했어요. 다시 시도해 주세요",
+      },
     },
   },
 

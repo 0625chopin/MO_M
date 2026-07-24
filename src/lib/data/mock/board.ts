@@ -83,11 +83,17 @@ export interface CreatePostInput {
   type: PostType;
   title: string;
   body: string;
-  /** type='meetup_proposal'일 때만 의미 있다(FR-034). */
+  /** 아래 4개 필드는 전부 type='meetup_proposal'일 때만 의미 있다(FR-034, D-013). */
   meetupDate?: string | null;
+  startTime?: string | null;
+  place?: string | null;
+  capacity?: number | null;
 }
 
+/** `general` 게시글은 모임 제안 필드 4종을 전부 null로 고정한다 — 유형별 분기를 호출부(Server
+ *  Action)에 흩어 두지 않고 이 함수 하나가 강제한다. */
 export async function createPost(input: CreatePostInput): Promise<Post> {
+  const isProposal = input.type === "meetup_proposal";
   const post: Post = {
     id: generateId("post"),
     boardId: input.boardId,
@@ -95,7 +101,10 @@ export async function createPost(input: CreatePostInput): Promise<Post> {
     type: input.type,
     title: input.title,
     body: input.body,
-    meetupDate: input.type === "meetup_proposal" ? (input.meetupDate ?? null) : null,
+    meetupDate: isProposal ? (input.meetupDate ?? null) : null,
+    startTime: isProposal ? (input.startTime ?? null) : null,
+    place: isProposal ? (input.place ?? null) : null,
+    capacity: isProposal ? (input.capacity ?? null) : null,
     createdAt: new Date().toISOString(),
     editedAt: null,
     deletedAt: null,

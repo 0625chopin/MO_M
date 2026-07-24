@@ -2,7 +2,7 @@
 
 개발 중 발견한 **미결 이슈와 개선사항**을 기록한다. 이 파일이 이슈 번호의 **단일 소스**다.
 
-- **다음 이슈 번호: I-038** (등재할 때마다 이 줄을 갱신한다)
+- **다음 이슈 번호: I-045** (등재할 때마다 이 줄을 갱신한다. **여러 사람이 동시에 등재하는 회차에는 이 줄만 믿지 말고** 등재 직전에 `grep -n "^### I-0" docs/ISSUES.md | tail`로 실제 최댓값을 확인한다 — 7일차에 네 명이 동시에 작업하며 이 줄이 실제와 어긋난 적이 있다)
 - 확정된 **결정**은 여기가 아니라 [`prioritization-and-risks.md`](./prioritization-and-risks.md) 6.3절 결정 기록(D-\*)에 쓴다. 결정과 미결을 같은 곳에 두지 않는다.
 - 이슈는 **누구나 제보**한다. 등재할 때 형식(아래 "기록 형식")을 지키고 "다음 이슈 번호" 줄을 함께 갱신한다.
 
@@ -339,12 +339,12 @@
 
 ### I-035 · `(app)/crews/[crewId]/*`가 인증 여부만 검사하고 크루원 여부는 검사하지 않는다
 
-- **상태**: 열림
+- **상태**: 해결됨 (2026-07-24, 7일차 — CREW, Task 016B)
 - **영역**: 데이터 / 권한
 - **제보**: DESIGN (2026-07-24, 6일차 — 팀장 지시 E-3, `(app)` 라우트 그룹 정리 중 발견)
 - **내용**: `src/app/(app)/layout.tsx`는 "로그인 여부"만 검사한다(D-030 ④). 그런데 `docs/requirements/requirements.md`의 D-007은 크루 게시판·채팅·멤버 목록·캘린더를 **크루원 전용**으로 규정한다 — 로그인은 했지만 그 크루 멤버가 아닌 회원도 걸러야 한다. `(app)/crews/[crewId]/board`·`chat`·`members`·`settings`는 지금 "로그인만 하면" 라우트 자체에는 도달한다. 현재는 `BoardListContainer`가 `resolveBoardViewer`+`checkPermission`으로 **컨테이너 레벨**에서 비멤버를 거부하지만(그래서 실제 데이터가 새지는 않는다), **라우트 레벨 게이트는 없다** — 크루원 판정을 컨테이너마다 따로 구현하면 하나라도 빠뜨렸을 때 그 라우트만 뚫린다(이 프로젝트가 이미 여러 번 지적한 "반복되면 하나를 빠뜨린다" 패턴과 같다).
 - **영향**: Task 016B(크루 홈·하위 화면)·017A(멤버 초대 등)가 크루 하위 화면을 실제로 채우기 전까지는 컨테이너 레벨 방어(`resolveBoardViewer` 패턴)로 버틸 수 있다. 그 이후에도 라우트 레벨 게이트 없이 컨테이너마다 개별 방어에만 의존하면, 새 크루 하위 화면을 추가할 때마다 그 방어를 다시 구현해야 하고 하나를 빠뜨리면 그 화면만 조용히 뚫린다.
-- **후속**: Task 016B·017A 착수 시 크루원 게이트를 어디에 둘지 결정한다 — 유력한 후보는 `(app)/crews/[crewId]/layout.tsx`(동적 세그먼트 `crewId`로 멤버십을 한 번만 조회해 그 하위 전부에 적용) — `getCrewMembership`+`deriveUserRoleForPermissionCheck`를 여기서 한 번 호출하고 결과를 하위 컨테이너들이 재사용하는 형태가 유력하다. 결정되면 `docs/prioritization-and-risks.md`에 D-\*로 등재하고 `docs/CONVENTIONS.md` D-030 ④ 절도 갱신한다.
+- **후속**: ~~Task 016B·017A 착수 시 크루원 게이트를 어디에 둘지 결정한다~~ **→ Task 016B(7일차)에서 해소.** 유력안 그대로 `src/app/(app)/crews/[crewId]/layout.tsx`를 만들어 `getCrewMembership`+`isActiveMembership`로 "활성 크루원인가"를 한 번만 판정하고 하위 전부(board·chat·members·settings)에 적용했다 — 비멤버는 `cause:{code:"forbidden"}`을 던져 전역 `RouteErrorBoundary`로 떨어진다. `resolveBoardViewer`+`BoardListContainer`의 컨테이너 레벨 방어는 **제거하지 않고 유지**했다(그 컨테이너가 `role` 세분을 `post:create` 판정에도 재사용하기 때문 — "레이아웃이 이미 막았으니 컨테이너 방어가 전부 불필요하다"고 단순화하지 않았다). 근거 전문·대안 비교는 **`docs/prioritization-and-risks.md` D-039**, 요약은 `docs/CONVENTIONS.md` D-030 ④ 절.
 
 ### I-036 · `/crews`(크루 탐색)·`/crews/[crewId]`(크루 홈)가 `(app)` 아래에 있어 게스트 접근이 막혀 있다
 
@@ -358,10 +358,210 @@
 
 ### I-037 · 교차검증이 정적 검사에 치우쳐 실제 렌더에서만 드러나는 결함을 놓친다
 
-- **상태**: 열림
+- **상태**: 해결됨 (7일차, 2026-07-24 — 절차 확정·시행)
 - **영역**: 빌드 / 접근성 / 프로세스
 - **제보**: 사용자 (2026-07-24, 6일차 회차 종료 직후 개발 서버 콘솔에서 발견)
 - **내용**: 6일차에 Task 018A(게시판 목록·게시글 상세)는 교차검증(CORE→BOARD)에서 **유일하게 이슈 0건**으로 통과했다. 그런데 회차 종료 직후 사용자가 `/sample`을 열자 Base UI 런타임 오류가 두 건 떴다 — `BoardList`·`PostDeletedNotice`가 `<Button render={<Link />}>`로 `<a>`를 렌더하면서 `nativeButton`(기본 `true`)을 그대로 둬, Base UI가 "네이티브 `<button>`을 기대했다"고 경고하고 링크에 button 시맨틱이 덧씌워졌다(`node_modules/@base-ui/react/internals/use-button/useButton.mjs`가 `useEffect`에서 실제 DOM 태그를 검사해 내는 경고다).
   **이 결함은 `npx tsc --noEmit`·`npm run lint`·`npm run build` 세 명령을 전부 통과한다** — `nativeButton`은 선택적 prop이라 생략해도 타입이 맞고, ESLint 규칙에도 걸리지 않으며, 빌드는 성공한다. 6일차 검증은 파일 열람 + 이 세 명령으로 이뤄졌고 **실제 브라우저 렌더를 확인한 것은 021A(DESIGN이 Playwright로 360px·키보드 내비 실측) 하나뿐**이었다.
 - **영향**: 테스트 러너가 없는 동안(**R-002**) 회귀 확인 지점은 `/sample`뿐인데, **그 `/sample`을 실제로 열어 보는 절차가 회차 흐름에 들어 있지 않다.** 정적 검사만으로는 ① 런타임 접근성 경고(이번 건, `role`/`aria` 오적용) ② 하이드레이션 불일치 ③ 라이트·다크 실제 대비(**I-032**와 같은 결) ④ 레이아웃 붕괴를 잡을 수 없다. 5일차 I-032가 "실측을 못 했다"는 기록이었다면 이번 건은 **실측하지 않아 실제로 결함이 남았다**는 사례다.
 - **후속**: 회차 완료 처리에 **`/sample` 실제 렌더 확인**을 넣을지 결정한다. 후보 — ① 팀장이 전체 테스트 3종에 더해 개발 서버를 띄우고 `/sample` 콘솔 오류 0건을 확인한다(Playwright MCP로 `browser_console_messages`) ② 각 팀원이 자기 산출 컴포넌트가 등록된 `/sample` 섹션만 열어 확인하고 보고에 포함한다. **주의**: 6일차에 팀장이 검증용 `npm run build`를 반복 실행하자 사용자가 띄워 둔 개발 서버가 옛 청크를 계속 서빙해(파일 감시 상실) 수정 반영 여부를 브라우저로 확인할 수 없었다 — 개발 서버와 `npm run build`를 같은 디렉터리에서 번갈아 돌리는 것 자체가 이 확인 절차의 걸림돌이라 함께 정리해야 한다. Task 024(접근성·반응형 QA 패스)와 범위가 겹치므로 그때 흡수할지도 함께 판단한다.
+- **해결 (7일차)**: 후보 ①을 **build 이후 1회**로 순서를 고정해 채택했다. 걸림돌(개발 서버와 `npm run build`의 stale chunk 충돌)은 **순서로 회피**한다 — 팀원에게는 `tsc`·`eslint`만 허용하고 `npm run build`와 개발 서버를 모두 금지한 뒤, 팀장이 ⓐ`lint`→ⓑ`tsc`→ⓒ`build`를 전부 끝내고 ⓓ그 다음에 개발 서버를 **다른 포트로 한 번만** 띄워 확인한다. build가 끝난 뒤 띄우므로 감시 상실이 일어날 창이 없다.
+  후보 ②(팀원 각자 확인)는 채택하지 않았다 — 팀원 넷이 각자 개발 서버를 띄우면 6일차의 build 레이스 컨디션이 포트 단위로 재현된다.
+  **7일차 시행 결과**: `/sample` 콘솔 오류 0건(경고는 Next.js 폰트 프리로드 1종뿐, 전 페이지 공통이라 우리 코드와 무관), 신규 라우트 7개(`/crews`·`/crews/[crewId]`·`/crews/new`·`/crews/[crewId]/chat`·`/crews/[crewId]/board/new`·`/home`·`/calendar`) 전부 오류 0건, `/calendar` 360px `scrollWidth === clientWidth === 360`. **정적 검사가 놓친 것을 실제로 두 건 잡았다** — ⓐ채팅 전송이 실제로 동작하는지(020A BLOCKER 1 수정의 실증: 메시지가 목록에 1회만 append되고 중복·삼킴 없음) ⓑ**I-044**(권한 거부가 HTTP 500으로 응답됨 — 화면은 정상이라 코드 열람으로는 발견 불가능했다).
+  Task 024(접근성·반응형 QA 패스)와의 관계: 이 절차는 "콘솔 오류 0건"만 보는 회귀 확인이고, 대비·CVD·키보드 전수 점검은 여전히 Task 024 몫이다 — 흡수하지 않고 병존한다.
+
+### I-038 · 크루명·소개 글자 수 상한과 금칙어 목록이 요구사항에 없다
+
+- **상태**: 열림
+- **영역**: 데이터 / 요구사항
+- **제보**: CREW (2026-07-24, 7일차 — Task 016B 크루 개설 화면)
+- **내용**: FR-010은 크루 개설 입력 항목으로 크루명·소개·카테고리·공개 범위를 명시하고 "E3
+  금칙어 포함 → 거부"라는 예외 흐름도 두지만, 크루명·소개 각각의 글자 수 상한과 금칙어
+  목록 자체는 요구사항 어디에도 정의돼 있지 않다 — **I-033(핸들 형식)·I-034(bio 상한)와 같은
+  결의 문제**다. `src/lib/rules/crew-name-validation.ts`의 `CREW_NAME_MAX_LENGTH`(30, 표시
+  이름과 나란히 맞춤)와 `crew-description-validation.ts`의 `CREW_DESCRIPTION_MAX_LENGTH`
+  (300, bio 150자의 두 배)는 둘 다 요구사항에서 끌어온 값이 아닌 실용적 잠정값이다. 금칙어
+  목록(`BANNED_WORDS`, `crew-name-validation.ts`)은 더 근본적으로 잠정적이다 — 검사가
+  존재한다는 것을 보이는 최소 데모 집합(비속어 6개)일 뿐 실제 운영에 쓸 사전이 아니다.
+- **영향**: 실사용자가 크루 개설 시 직접 입력하는 필드에 고객 확인 없는 임의 상한·필터가
+  걸려 있다. 특히 금칙어 목록은 표기 방식(초성 우회·유니코드 치환 등 실제 악용 패턴)과
+  운영 정책(신고 연동 여부, FR-080·082는 v0.2)에 대한 고객·법무 확인이 필요한 영역인데
+  지금은 개발자가 즉흥적으로 채운 상태다. Task 028(스키마 마이그레이션)에서 길이 상한을
+  실제 DB 제약으로 굳히기 전에, 그리고 실사용자에게 노출되기 전에 금칙어 목록을 반드시
+  재검토해야 한다.
+- **후속**: 고객 확인 필요. 확정되면 D-\*로 승격하고 두 파일의 상수·`BANNED_WORDS`·
+  docstring을 그 값으로 갱신한다. 금칙어 목록은 별도 데이터 소스(운영 콘솔에서 관리하는
+  테이블 등)로 옮기는 편이 나을 수 있다 — 코드에 하드코딩된 배열은 배포 없이 갱신할 수
+  없다.
+
+### I-039 · 권한 매트릭스에 "채팅방 열람" 자체를 가리키는 행이 없다
+
+- **상태**: 열림
+- **영역**: 데이터 / 권한
+- **제보**: CORE (2026-07-24, 7일차 — Task 020A 채팅 MessageList/Bubble/Composer 구현 중 발견)
+- **내용**: `requirements.md` 3.3절 권한 매트릭스·`lib/rules/permission.ts`의 `PermissionAction` 34개
+  액션 중 게시판에는 `board:read`(열람)와 `post:create`(쓰기)가 별행으로 나뉘어 있는데, 채팅에는
+  `chat:send_message`(FR-051 전송)·`chat:delete_own_message`·`chat:delete_any_message`(FR-054
+  삭제)만 있고 **"채팅방 열람" 자체를 가리키는 행이 없다.** `MessageListContainer`(Task 020A)가
+  방 접근 자체를 게이트해야 하는데(FR-050 AC3 "탈퇴한 사용자, 채팅방 접근 시 403") 쓸 수 있는
+  행이 `chat:send_message` 하나뿐이라 이 회차는 그 행을 열람 게이트로도 재사용했다 — FR-050
+  AC2("가입 승인된 신규 크루원은 별도 참여 절차 없이 메시지를 보낼 수 있다")를 근거로 열람과
+  전송이 요구하는 최소 role이 같다(crew_member 이상)고 읽은 판단이다. 실제 코드는
+  `src/components/chat/MessageListContainer.tsx`·`src/lib/actions/load-earlier-messages.ts` 둘 다
+  이 판단으로 `chat:send_message`를 게이트로 쓴다.
+- **영향**: 지금은 "읽기 권한 = 쓰기 권한"이 실제로 맞아떨어져 동작에 문제가 없다. 하지만
+  나중에 "읽기 전용 크루원"처럼 열람은 되고 전송은 안 되는 역할이 생기면(v0.2 가능성), 이
+  하나의 액션에 두 가지 다른 의미(열람 게이트·전송 판정)가 걸려 있어 매트릭스를 고치는 사람이
+  두 의미를 분리해야 한다는 사실을 놓치기 쉽다. `board:read`처럼 `chat:read` 행을 매트릭스에
+  추가하는 편이 더 명시적이지만, 그건 권한 매트릭스 자체(Task 009B 산출물, `lib/rules/README.md`
+  포함)를 바꾸는 결정이라 이 Task(020A) 범위를 넘는다고 판단해 임의로 추가하지 않았다.
+- **후속**: 채팅 관련 후속 Task(020B·020C) 또는 권한 매트릭스를 다시 다루는 Task 착수 전에
+  `chat:read` 행 신설 여부를 결정한다. 신설하면 `PermissionAction`·`PERMISSION_MATRIX`·
+  `docs/requirements/requirements.md` 3.3절·`MessageListContainer`·`load-earlier-messages.ts` 4곳을
+  함께 갱신해야 한다.
+
+### I-040 · 2.4절 멤버십 상태 다이어그램에 가입 신청 자신의 철회 전이가 없다
+
+- **상태**: 열림
+- **영역**: 데이터 / 요구사항
+- **제보**: CREW (2026-07-24, 7일차 — Task 016B 가입 신청 버튼 상태 기계 구현 중 발견)
+- **내용**: `requirements.md` 2.4절 "Crew 멤버십 상태" 다이어그램은 `requested`에서 나가는
+  전이로 `approve_request`(→`active`)·`reject_request`(→`rejected`) 둘만 정의한다 — 신청자
+  본인이 대기 중 신청을 스스로 철회하는 전이가 없다. 그런데 FR-022 예외 흐름 E4("신청 철회 —
+  신청자가 대기 중 철회 가능")와 AC3("버튼이 '신청 대기 중 · 철회'로 바뀐다")는 이 기능을
+  명시적으로 요구한다 — **다이어그램과 FR 본문이 서로 어긋난다.**
+- **영향**: `lib/rules/crew-membership-transition.ts`의 `CrewMembershipEvent`·`TRANSITIONS`는
+  2.4절 다이어그램을 코드로 그대로 옮긴 것이라 이 전이를 표현할 방법이 없다. 근거 없이 새
+  이벤트·상태를 다이어그램에 끼워 넣는 대신, `src/lib/data/mock/crew.ts`의
+  `withdrawPendingCrewMembership`이 **실용적으로 철회를 `rejected`(반려)와 같은 종착 상태로
+  합류**시키는 근사로 이 회차를 넘겼다 — 재신청 가능 여부(`removed`만 차단, FR-022 E3)에는
+  차이가 없고, "누가 왜 끝냈는지"의 실제 구분은 `JoinRequest.status`(`pending`→`withdrawn`,
+  이번 회차에 `JoinRequestStatus`에 추가)가 담당하므로 멤버십 상태 자체가 구분할 필요는
+  없다고 판단했다. 다만 이 근사가 실제로 맞는지(예: 크루 설정의 "반려 이력" 화면이 나중에
+  생기면 철회와 반려를 섞어 보여주는 게 맞는지)는 고객 확인이 없었다.
+- **후속**: 2.4절 다이어그램에 `requested --> [*]`(자진 철회) 전이를 공식 추가할지 결정한다.
+  추가하면 `crew-membership-transition.ts`의 `CrewMembershipEvent`에 `withdraw_request`를
+  더하고 `withdrawPendingCrewMembership`이 `rejected` 대신 이 새 이벤트를 쓰도록 고친다.
+  Task 017A(멤버 관리, 반려/강퇴 이력 화면)가 착수되기 전에 정리하는 것이 좋다 — 그 화면이
+  "반려됨" 목록을 보여줄 때 자진 철회 건이 섞여 나오면 사용자에게 오해를 줄 수 있다.
+
+### I-041 · 홈 대시보드 "다가오는 모임" 요약의 표시 개수·크루 필터 적용 범위가 요구사항에 없다
+
+- **상태**: 열림
+- **영역**: 데이터 / 요구사항
+- **제보**: DESIGN (2026-07-24, 7일차 — Task 021B 홈 대시보드 캘린더 요약 구현 중 발견)
+- **내용**: `PRD-validation.md:965`는 "홈 대시보드 캘린더 요약"에 2인일을 산정했을 뿐 표시
+  개수·범위를 정의하지 않는다. `requirements.md`의 SC-06도 "대시보드(내 크루·다가오는
+  Meetup·알림)"라고만 적어 몇 건을 보여줄지, `/calendar`의 크루 필터(FR-061 AC5, 선택 상태를
+  쿠키에 유지)를 이 요약에도 적용해야 하는지는 명시하지 않는다.
+  `HomeCalendarSummaryContainer.tsx`의 `UPCOMING_MEETUP_LIMIT`(5)은 요구사항에서 끌어온 값이
+  아닌 실용적 잠정값이다(**I-033·I-034·I-038과 같은 결의 문제**). 크루 필터를 이 요약에는
+  적용하지 않기로 한 것(소속 전체 크루의 다가오는 일정을 그대로 보여줌)도 마찬가지로 임의
+  판단이다 — `/calendar` 필터는 그 페이지에 저장된 선호일 뿐이고, 요약에도 확장해야 한다는
+  근거가 문서 어디에도 없어 우선 확장하지 않는 쪽으로 정했다(`HomeCalendarSummaryContainer.tsx`
+  모듈 docstring에 판단 근거를 남겨 뒀다).
+- **영향**: 실사용자가 보는 개수·범위가 임의로 정해진 상태다. 소속 크루가 많은 사용자는 5건이
+  너무 적게 느껴질 수 있고, 반대로 `/calendar`에서 일부러 숨긴 크루의 일정이 홈 요약에는
+  그대로 나와 "숨겼는데 왜 여기 보이지"라는 혼란을 줄 수 있다.
+- **후속**: 고객 확인 필요. 확정되면 D-\*로 승격하고 `HomeCalendarSummaryContainer.tsx`의
+  상수·docstring을 그 값으로 갱신한다.
+
+### I-042 · `mock.ts`의 "Mock Server Action이 발행에 쓴다" 안내가 서버/클라이언트 모듈 인스턴스 분리 함정으로 이어졌다
+
+- **상태**: 해결됨 (2026-07-24, 7일차 — CORE가 Task 020A 코드를 직접 고쳐 해소, DESIGN 020A 교차검증 BLOCKER 1로 발견)
+- **영역**: 실시간 / 아키텍처 / 문서
+- **제보**: DESIGN (2026-07-24, 7일차 — Task 020A 채팅 교차검증 중 실측)
+- **내용**: Task 020A 첫 구현에서 `sendChatMessageAction`(`"use server"`)이 전송 성공 시
+  `lib/realtime`의 `publishMockEvent`를 **자기 안에서 직접** 호출했다. 그런데 이 Server Action은
+  Node.js 서버 프로세스에서 실행되고, `subscribeToRoom`은 `MessageRoomContainer`(`"use client"`)의
+  `useEffect` 안이라 **브라우저에서만** 실행된다. `src/lib/realtime/mock.ts:27`의
+  `const rooms = new Map()`은 모듈 스코프 싱글턴인데 Next.js는 서버 번들과 클라이언트 번들을
+  따로 만들므로 서버 쪽 `rooms`와 클라이언트 쪽 `rooms`는 **완전히 별개 인스턴스**다. 그 결과
+  서버에서 발행한 이벤트는 구독자 0명인 서버 쪽 Map에서 `mock.ts`의 `if (!room) return`에 걸려
+  조용히 사라졌다 — 발신자 본인도 새로고침 전엔 자기 메시지를 못 보는 실제 버그였다(FR-051
+  AC1 완전 실패). `npx tsc --noEmit`·`npm run lint` 둘 다 통과하는 런타임 전용 결함이라
+  I-037이 우려한 정확히 그 종류다.
+  DESIGN은 이 함정을 `mock.ts:56-59`의 안내 문구("실제 백엔드 없이... 시뮬레이션하는 훅.
+  Mock Server Action(D-030 부수 결정 — '쓰기 후 갱신'을 흉내 낼 때)이나 `/sample` 상태 토글이
+  쓴다")가 유도했다고 지적했다 — "Mock Server Action이 쓴다"는 문구가 "Server Action 안에서
+  직접 호출해도 된다"로 읽히지만, 실제로는 **호출 위치가 브라우저 쪽이어야만** 구독자에게
+  닿는다는 전제가 빠져 있었다.
+- **영향**: 다음 사람이 `subscribeToRoom`/`publishMockEvent`를 처음 쓸 때 같은 함정에 빠질 수
+  있다. `mock.ts`의 안내 문구 자체를 "Server Action에서 직접 호출하면 서버·클라이언트 모듈
+  인스턴스가 분리돼 아무에게도 전달되지 않는다 — 클라이언트 컨테이너가 결과를 받아 브라우저
+  쪽에서 발행해야 한다"는 경고로 바꿔야 한다(Task 008 소관, CREW).
+- **해소**: CORE가 `sendChatMessageAction`(`src/lib/actions/send-chat-message.ts`)에서
+  `publishMockEvent` 호출을 제거하고 대신 저장된 메시지를 반환하도록 바꿨다. `Composer.tsx`가
+  전송 성공 시 그 메시지를 `onSent` 콜백으로 부모(`MessageRoomContainer.tsx`, `*Container.tsx`
+  라 `@/lib/realtime` 배럴 import가 zone 5에서 허용된다)에 올려보내고,
+  `MessageRoomContainer`가 브라우저 쪽에서 `publishMockEvent`를 호출한다 — 자기 자신의
+  `subscribeToRoom` 구독이 그 이벤트를 되받아 목록에 append한다(다른 사용자의 메시지가 도착하는
+  경로와 동일). **다른 탭·다른 사용자에게는 여전히 전달되지 않는다** — 이건 새 버그가 아니라
+  Mock 단계에 전송 계층 자체가 없다는 구조적 한계이며, 억지로 흉내 내지 않고
+  `MessageRoomContainer.tsx` 모듈 docstring에 명시만 해 뒀다. 실제 다중 사용자 전달은 Task
+  033(Supabase Realtime Broadcast, D-023)이 `lib/realtime/broadcast.ts`를 배럴에 연결하면
+  그대로 성립한다(컨테이너 쪽 코드는 바뀌지 않는다, D-030 ②).
+  **문구 정정 완료(2026-07-24, 7일차, CREW)**: `mock.ts` 모듈 상단 docstring·
+  `publishMockEvent`/`publishMockError` 함수 docstring·`rooms` Map 주석을 전부 위 "영향"에
+  적은 경고("Server Action 안에서 직접 부르지 않는다, 서버·클라이언트 모듈 인스턴스가
+  분리된다")로 교체했고, 배럴(`src/lib/realtime/index.ts`)의 재노출 주석에 있던 같은 문구
+  ("Mock Server Action이... 쓴다")도 함께 고쳤다 — `types.ts`에는 같은 문구가 없었다(확인
+  완료). 탭 간·사용자 간 전달이 원천적으로 불가능하다는 Mock 단계의 구조적 한계도 세 파일
+  (`mock.ts`·`index.ts`·`README.md`)에 명시했다 — 이걸 흉내 내는 코드(`BroadcastChannel` 등)는
+  추가하지 않았다(추가하면 Task 033 전환 시 걷어내야 할 임시 계층이 된다). `tsc --noEmit`·
+  `npm run lint` 재확인 통과. **이 이슈는 완전히 해소됐다.**
+
+### I-043 · 모임 제안글 날짜 검증의 기준 타임존이 요구사항에 없다
+
+- **상태**: 열림
+- **영역**: 데이터 / 요구사항
+- **제보**: BOARD (2026-07-24, 7일차 — Task 018B 글쓰기 화면, 날짜 검증 순수 함수 작성 중 발견)
+- **내용**: FR-034 E1~E3(예정일 과거 금지·투표 마감 순서·마감 미래 시각)과 NFR-025는 "타임존
+  3종(UTC·KST·UTC-8) 교차 검증"을 요구할 뿐, **"오늘"·"과거"를 판정할 기준 타임존 자체**를
+  정의하지 않는다. `Profile`에는 사용자별 타임존 필드가 없다(2026-07-24 시점 스키마 확인) —
+  즉 "이 사용자에게 오늘이 언제인가"를 결정할 근거가 요구사항 어디에도 없다.
+  `src/lib/rules/meetup-proposal-schedule.ts`의 `MEETUP_PROPOSAL_TIME_ZONE`(`Asia/Seoul`
+  고정값)은 D-011("v0.1은 한국 단독 시장")에서 끌어온 추론이지, 고객이 "서비스는 KST
+  기준으로 날짜를 판정한다"고 명시적으로 확인한 값이 아니다 — I-033(핸들 형식)·I-034(bio
+  상한)·I-038(크루명 상한)과 같은 결의 문제(요구사항에 값이 없어 실용적으로 채운 잠정값)다.
+- **영향**: 지금은 모든 사용자가 한국에 있다고 가정해도 실사용에 문제가 없다(D-011 그대로).
+  하지만 해외 체류 사용자가 자정 근처에 모임을 제안하면 "오늘"의 경계가 그 사람의 실제
+  현지 시각과 어긋날 수 있다 — 정확히 NFR-025가 "타임존 3종 교차 검증"으로 잡으려는 결함이
+  기준 타임존 선택 문제로 형태만 바뀌어 남는다. Task 019(투표 UI)·034(자동 종료 파이프라인)가
+  같은 상수를 재사용할 가능성이 높아, 나중에 사용자별 타임존이 도입되면 이 상수를 참조하는
+  모든 지점을 함께 찾아 바꿔야 한다.
+- **후속**: 사용자별 타임존이 필요한지(v0.2 범위일 수 있음) 고객 확인. 확정되면 D-\*로
+  승격하고 `meetup-proposal-schedule.ts`의 상수·docstring을 그 값으로 갱신한다 —
+  `timeZone` 인자가 이미 선택적 오버라이드로 열려 있어(기본값만 KST) 호출부 변경 없이
+  값만 바꿀 수 있다.
+
+### I-044 · 라우트 레벨 권한 거부가 HTTP 500으로 응답된다(화면은 403 화면이 정상 렌더됨)
+
+- **상태**: 열림
+- **영역**: 데이터 / 권한 / 빌드
+- **제보**: 팀장 (2026-07-24, 7일차 회차 말미 `/sample` 실제 렌더 확인 중 발견 — I-037 대응 절차가 처음으로 잡아낸 건)
+- **내용**: 비크루원 세션(`profile-1`)으로 `/crews/crew-2/board`에 접근하면 D-039 게이트
+  (`src/app/(app)/crews/[crewId]/layout.tsx`)가 `cause: {code:"forbidden"}`을 **throw**하고,
+  `src/app/error.tsx`의 `classifyError`가 이를 받아 `RouteErrorBoundary(kind="forbidden")`를
+  렌더한다. **화면은 요구사항대로다** — "접근 권한이 없어요 / 이 크루의 크루원만 볼 수 있어요"가
+  정상 출력되고 콘솔 오류도 Next.js가 throw를 로깅한 것뿐이다. 그런데 **HTTP 응답 상태가 500**이다.
+  React `error.tsx` 경계는 잡아낸 오류를 항상 500으로 응답하기 때문이다.
+  `docs/requirements/requirements.md`는 여러 곳에서 403을 명시한다 — 462행 "E1 권한 없음 → 403 화면",
+  478행 AC4 "비로그인 상태로 직접 호출, Then 401 또는 403이 반환된다", 594행 AC2 "탈퇴 완료 후
+  게시판 URL 직접 접근, Then 403이 반환된다".
+  **이 패턴은 018A(BOARD)가 세우고 D-039(CREW)가 라우트 레벨로 확장한 것이라 특정 Task의 결함이 아니라
+  프로젝트 공통 관례다** — `resolveBoardViewer`·`(app)/crews/[crewId]/layout.tsx`·각 컨테이너가
+  전부 같은 throw 방식을 쓴다.
+- **영향**: v0.1 Mock 단계에서는 화면이 맞으므로 사용자 영향이 없다. 문제는 **관측과 실데이터 단계**다 —
+  ① 권한 거부가 서버 오류로 집계돼 오류율 지표가 오염된다(NFR-030 KPI 이벤트 수집, Task 045).
+  ② 크롤러·모니터링이 정상적인 접근 통제를 장애로 읽는다.
+  ③ Task 029A/029B의 RLS 403과 라우트 게이트 403이 서로 다른 HTTP 상태로 나가면 클라이언트가
+  두 경우를 다르게 다뤄야 한다 — 지금 `DataErrorCode`가 `forbidden`으로 통일해 둔 이점이 상태 코드
+  층에서 깨진다. I-027(`DataErrorCode`에 403류 코드가 없다)이 코드 층에서 다룬 문제의 HTTP 층 대응물이다.
+- **후속**: 라우트 레벨 거부의 응답 상태를 어떻게 낼지 결정한다. 검토할 후보 —
+  ① `error.tsx` 유지 + 500 수용(현행, "화면이 맞으면 된다"는 입장. 근거를 문서에 명시해야 한다)
+  ② `forbidden()`/`unauthorized()` 등 Next.js 16이 제공하는 전용 API가 이 버전에 있는지 확인해 교체
+  (`node_modules/next/dist/docs/`에서 먼저 확인할 것 — 추측하지 말 것)
+  ③ 라우트 핸들러·프록시 층에서 상태를 갈아 끼움(D-011로 `proxy.ts`가 v0.1 범위 밖이라 v0.2 이후).
+  Task 029A(RLS 정책)·031(읽기 경로 실데이터 교체) 착수 전에 정하는 것이 좋다 — 그때 같은 판단이
+  RLS 403 경로에도 필요해지고, 두 경로가 갈리면 되돌리기 어렵다.

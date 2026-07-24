@@ -73,6 +73,12 @@ export function generatePosts(
       title: template.title,
       body: template.body,
       meetupDate,
+      // 시드 데이터는 선택 입력 3종(D-013)까지 채우지 않는다 — 정원·시작 시각·장소는
+      // Task 018B(글쓰기)가 실제로 입력받는 경로를 시연하는 목적이 아니라 Poll/Meetup
+      // 파이프라인(FR-060) 실증이 이 생성기의 목표라 필수값(meetupDate)만 채운다.
+      startTime: null,
+      place: null,
+      capacity: null,
       createdAt,
       editedAt: null,
       deletedAt: null,
@@ -123,6 +129,9 @@ export function generatePosts(
         title: template.title,
         body: template.body,
         meetupDate: null,
+        startTime: null,
+        place: null,
+        capacity: null,
         createdAt,
         editedAt: rng() < 0.1 ? addDays(createdAt, 1) : null,
         deletedAt: null,
