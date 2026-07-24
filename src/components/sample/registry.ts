@@ -16,6 +16,7 @@ import { overlaysSection } from "@/components/sample/sections/overlays";
 import { pollSection } from "@/components/sample/sections/poll";
 import { primitivesSection } from "@/components/sample/sections/primitives";
 import { shellSection } from "@/components/sample/sections/shell";
+import { themeSection } from "@/components/sample/sections/theme";
 import type { ShowcaseSection } from "@/components/sample/showcase-types";
 export { defineSection } from "@/components/sample/showcase-types";
 export type { ShowcaseItem, ShowcaseSection } from "@/components/sample/showcase-types";
@@ -33,6 +34,7 @@ export type { ShowcaseItem, ShowcaseSection } from "@/components/sample/showcase
 export const SHOWCASE_SECTIONS: ShowcaseSection[] = [
   foundationSection,
   certaintySection,
+  themeSection,
   shellSection,
   primitivesSection,
   formsSection,

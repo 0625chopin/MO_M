@@ -4,6 +4,8 @@ import { ToastHostContainer } from "@/components/notifications/ToastHostContaine
 import { AppShell } from "@/components/shell/AppShell";
 import { isAuthenticated } from "@/components/shell/auth-session";
 import { getAuthSession } from "@/components/shell/get-auth-session";
+import { THEME_INIT_SCRIPT } from "@/components/theme/theme-config";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { Toaster } from "@/components/ui/toast";
 import { strings } from "@/lib/strings";
 
@@ -78,16 +80,26 @@ export default async function RootLayout({
   return (
     <html
       lang="ko"
+      // FOUC 방지 스크립트가 하이드레이션 이전에 `<html>`에 `.light`/`.dark`를 붙이므로 서버가
+      // 렌더한 className과 달라진다. 이 한 요소의 속성 불일치 경고만 억제한다(next-themes와 동일
+      // 관례) — 자식 트리에는 전파되지 않는다.
+      suppressHydrationWarning
       className={`${sansKr.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AppShell session={session}>{children}</AppShell>
-        <Toaster />
-        {/* ToastHost(Task 023, D-030 ④) — 인증·전역 경계는 레이아웃에서 처리한다. `session`을
-            여기서 좁혀 넘기는 이유는 `getAuthSession()`을 이 파일이 이미 호출해 뒀기 때문이다
-            (`ToastHostContainer` 자신이 다시 조회하게 하지 않는다 — 이 지점 하나뿐인 배치라
-            반복 조회의 이점이 없다). */}
-        {isAuthenticated(session) && <ToastHostContainer profileId={session.profileId} />}
+        {/* FOUC 방지: 하이드레이션 이전에 동기 실행돼 저장된 테마(없으면 OS 설정)를 `<html>`
+            클래스로 즉시 반영한다. `ThemeProvider`가 mount되기 전 첫 페인트가 반대 테마로
+            번쩍이는 것을 막는다(근거·규칙은 `theme-config.ts`). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <ThemeProvider>
+          <AppShell session={session}>{children}</AppShell>
+          <Toaster />
+          {/* ToastHost(Task 023, D-030 ④) — 인증·전역 경계는 레이아웃에서 처리한다. `session`을
+              여기서 좁혀 넘기는 이유는 `getAuthSession()`을 이 파일이 이미 호출해 뒀기 때문이다
+              (`ToastHostContainer` 자신이 다시 조회하게 하지 않는다 — 이 지점 하나뿐인 배치라
+              반복 조회의 이점이 없다). */}
+          {isAuthenticated(session) && <ToastHostContainer profileId={session.profileId} />}
+        </ThemeProvider>
       </body>
     </html>
   );
