@@ -42,7 +42,10 @@ export function BoardList({ crewId, posts, totalCount, page, totalPages, canWrit
         </EmptyHeader>
         {canWrite && (
           <EmptyContent>
-            <Button size="sm" render={<Link href={writeHref} />}>
+            {/* `render`가 <a>를 만들므로 nativeButton={false}. 기본값(true)이면 Base UI가
+                네이티브 <button>을 기대해 개발 모드에서 경고하고, 링크에 button 시맨틱을
+                덧씌워 role·aria 속성이 어긋난다. 이동 동작이므로 링크가 맞는 자리다. */}
+            <Button size="sm" nativeButton={false} render={<Link href={writeHref} />}>
               {strings.board.list.writeButton}
             </Button>
           </EmptyContent>
@@ -58,7 +61,7 @@ export function BoardList({ crewId, posts, totalCount, page, totalPages, canWrit
           {t((s) => s.board.list.totalCount, { count: totalCount })}
         </p>
         {canWrite && (
-          <Button size="sm" render={<Link href={writeHref} />}>
+          <Button size="sm" nativeButton={false} render={<Link href={writeHref} />}>
             {strings.board.list.writeButton}
           </Button>
         )}

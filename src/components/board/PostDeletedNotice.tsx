@@ -31,7 +31,7 @@ export function PostDeletedNotice({ crewId }: { crewId: Id }) {
         <EmptyDescription>{strings.board.detail.deletedDescription}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button size="sm" render={<Link href={getBoardListHref(crewId)} />}>
+        <Button size="sm" nativeButton={false} render={<Link href={getBoardListHref(crewId)} />}>
           {strings.board.detail.backToList}
         </Button>
       </EmptyContent>
