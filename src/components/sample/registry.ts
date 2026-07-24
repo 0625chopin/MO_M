@@ -1,6 +1,8 @@
 import { certaintySection } from "@/components/sample/sections/certainty";
 import { errorsSection } from "@/components/sample/sections/errors";
+import { formsSection } from "@/components/sample/sections/forms";
 import { foundationSection } from "@/components/sample/sections/foundation";
+import { overlaysSection } from "@/components/sample/sections/overlays";
 import { primitivesSection } from "@/components/sample/sections/primitives";
 import { shellSection } from "@/components/sample/sections/shell";
 import type { ShowcaseSection } from "@/components/sample/showcase-types";
@@ -22,5 +24,7 @@ export const SHOWCASE_SECTIONS: ShowcaseSection[] = [
   certaintySection,
   shellSection,
   primitivesSection,
+  formsSection,
+  overlaysSection,
   errorsSection,
 ];

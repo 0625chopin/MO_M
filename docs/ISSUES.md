@@ -309,3 +309,12 @@
 - **내용**: 아래 **세 곳 모두 동일하게** "크루 15·멤버 300·게시글 200·**투표 40**·메시지 2,000·Meetup 60" 규모를 명시한다 — `docs/ROADMAP/ROADMAP.md:179`, `docs/ROADMAP/team/03.CREW.md:52`, `docs/prd/PRD-validation.md:890`. 그런데 `requirements.md`의 FR-060 AC1("제안의 예정일에 Meetup이 1건 생성된다")·AC3("재실행해도 Meetup이 중복 생성되지 않는다(멱등)")와 2.4절 상태 다이어그램이 **가결(`closed_passed`) Poll 1건 : Meetup 1건의 1:1 관계를 확정**한다(Task 007의 `meetup-1`↔`poll-2` 관계가 이미 이 전제로 만들어져 있었다). Meetup 60건을 만들려면 `closed_passed` Poll이 최소 60건 있어야 하는데 **40 < 60이라 "투표 40·Meetup 60"은 애초에 동시 성립이 불가능한 수치**다 — 어느 한쪽의 오기다.
 - **영향**: Task 010(Mock 시드 생성)이 이 스펙을 문자 그대로 따를 수 없어, 실제로는 Poll을 72건(가결 60 + 상태 다양성 12) 생성하고 이 판단 근거를 `src/lib/data/mock/seed/generate-polls.ts` 모듈 docstring에 남겼다(코드 실측: profiles 300·crews 15·crewMemberships 300·posts 200·**polls 72**·meetups **60**·chatMessages 2000, 상세는 CREW의 4일차 워크로그·Task 010 완료 보고 참고). 다음에 로드맵의 "투표 40"만 보고 "시드가 스펙과 다르다"고 오판할 사람을 막기 위해 여기 등재한다.
 - **후속**: `docs/ROADMAP/ROADMAP.md:179`·`docs/prd/PRD-validation.md:890`은 CREW 소유 문서가 아니라 직접 고치지 않는다 — 위치만 남겨 뒀고 팀장이 워크로그에 반영한다. `docs/ROADMAP/team/03.CREW.md`의 Task 010 항목에는 이 수치 정정 사실을 CREW가 직접 한 줄로 남겼다(해당 파일 참고).
+
+### I-032 · 원자 컴포넌트의 라이트·다크 실제 렌더를 이번 회차에 실측하지 못했다
+
+- **상태**: 열림
+- **영역**: 접근성 / 개발환경
+- **제보**: DESIGN (2026-07-24, Task 013 원자 15종 구현) — 교차검증 CORE·CREW도 각자 "내 담당 관점 밖 / 미확인"으로 동일 지점을 남겼다
+- **내용**: Task 013의 수락 기준에는 **텍스트 4.5:1 / 비텍스트 3:1 대비(NFR-018)** 와 **라이트·다크 양쪽 동작(NFR-022)** 이 들어 있는데, 이번 회차에 통과 근거로 삼은 것은 **정적 검증뿐**이다(`tsc`·`lint`·`build`, 그리고 "새 색 토큰을 추가하지 않았으므로 개편에서 이미 측정된 값을 그대로 쓴다"는 논증). Playwright MCP 브라우저가 **다른 세션에 점유돼**(`Browser is already in use`) 실제 렌더 스크린샷 대조를 수행하지 못했다.
+- **영향**: 두 가지가 갈린다. ㉠ **대비 수치 자체**는 새 토큰이 없어 재측정 필요가 낮다 — 이 논증은 `docs/design/design-language.md` §5의 기존 측정에 기대며 CREW가 신규 파일에 임의 색값 0건임을 grep으로 확인했다. ㉡ 그러나 **합성 결과**(예: `--destructive` 텍스트가 Toast의 배경 위에 올라갔을 때, 포커스 링이 Drawer 오버레이 위에 겹칠 때)는 토큰 단위 측정으로 보장되지 않는다. 이 회차에 새로 생긴 표면은 폼 오류 상태·Dialog/Drawer 오버레이·Toast 3종이라 전부 ㉡에 해당한다.
+- **후속**: **Task 024(접근성·반응형 QA 패스)의 필수 항목으로 이월**한다 — DESIGN이 `src/components/README.md` "접근성 확인 결과"와 `sections/overlays.tsx` 주석에 미수행 사실을 명시해 뒀다. 더불어 **브라우저 점유 자체가 회차마다 재발할 조건**이다(팀원 서브에이전트가 동시에 Playwright MCP를 잡으면 뒤에 온 쪽이 막힌다). 실측이 수락 기준인 Task를 배정할 때는 팀장이 브라우저를 쓰는 팀원을 회차 내에서 직렬화하거나, 검증 담당을 한 명으로 지정해야 한다.

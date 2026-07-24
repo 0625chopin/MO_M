@@ -12,8 +12,10 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { ErrorState } from "@/components/ui/error-state";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { crewCertaintyVars } from "@/lib/crew-palette";
 import { strings } from "@/lib/strings";
 
@@ -154,6 +156,44 @@ export const primitivesSection = defineSection({
                 {strings.common.actions.goBack}
               </Button>
             </Empty>
+          </div>
+        ),
+      },
+    },
+    {
+      name: "Tabs",
+      note: "shadcn Tabs(Base UI) — roving tabindex로 좌우 화살표가 탭을 옮기고 Tab 키는 패널로 빠져나갑니다. `/sample`의 상태 토글(StatePreview)도 같은 컴포넌트입니다.",
+      content: (
+        <div className="rounded-lg border border-border p-4">
+          <Tabs defaultValue="proposal">
+            <TabsList aria-label="게시글 유형">
+              <TabsTrigger value="free">자유글</TabsTrigger>
+              <TabsTrigger value="proposal">모임 제안</TabsTrigger>
+            </TabsList>
+            <TabsContent value="free" className="pt-2 text-sm text-muted-foreground">
+              자유롭게 쓰는 글입니다. 투표·정원이 없어요.
+            </TabsContent>
+            <TabsContent value="proposal" className="pt-2 text-sm text-muted-foreground">
+              찬반 투표로 확정하는 모임 제안입니다. 정족수를 채우면 판정이 나요.
+            </TabsContent>
+          </Tabs>
+        </div>
+      ),
+    },
+    {
+      name: "ErrorState",
+      note: "전체 화면 오류(RouteErrorBoundary, '오류 경계' 섹션)와 달리 카드·패널 한 칸이 실패했을 때 그 자리만 채우는 인라인 오류입니다. role=\"alert\"라 나타나는 즉시 보조기술에 안내됩니다(NFR-021).",
+      panels: {
+        error: (
+          <div className="max-w-sm rounded-lg border border-border p-4">
+            {/* onRetry는 함수(클로저)라 이 파일(서버 컴포넌트)에서 만들 수 없다 — Client
+                Component(ErrorState)에 함수 prop을 서버에서 직접 넘기면 직렬화 경계 위반이다
+                (`sections/errors.tsx`의 RouteErrorBoundaryPreview와 같은 이유). retry 동작이
+                필요한 실제 화면에서는 컨테이너(클라이언트 경계)가 콜백을 만들어 내려준다. */}
+            <ErrorState
+              title="이번 달 모임을 불러오지 못했어요"
+              description="네트워크 상태를 확인하고 다시 시도해 주세요."
+            />
           </div>
         ),
       },

@@ -76,6 +76,15 @@ interface ShowcaseSection {
 
 ## 지켜야 할 규칙
 
+- **`content`(정적 데모) vs `panels`(4상태 토글) 선택 기준**: 컴포넌트가 **비동기 데이터를
+  다루지 않으면**(로딩·빈 상태·도메인 오류라는 개념 자체가 없으면) `content`를 쓴다 — 예:
+  Button·Badge·Card·Dialog·BottomSheet·Toast·Tabs는 항상 그 자리에 그 모양으로 있거나(정적
+  UI) 비제어로 열리고 닫힐 뿐이라 "로딩 중인 버튼" 같은 상태가 의미 없다. 반대로 **원자가
+  드러내는 값이 서버 조회·검증 결과에 좌우되면** `panels`를 쓴다 — 폼 필드(Input 등)는
+  기본·오류(aria-invalid) 두 상태만, 목록형(Empty)은 빈·오류 두 상태만 채우는 식으로
+  **의미 있는 상태만** 채운다(타입이 `Partial<Record<SampleState, ReactNode>>`라 강제하지
+  않는다). 이 기준은 타입 레벨로 강제되지 않으므로(discriminated union은 "`content`·`panels`
+  중 정확히 하나"만 강제한다) 리뷰에서 판단이 갈리면 이 항목을 근거로 삼는다.
 - **4상태의 "오류"는 도메인 오류를 포함한다**(RLS 403·정원 마감·동시 수정 충돌 — D-030 ③).
   네트워크 실패만 넣지 않는다.
 - **도메인 컴포넌트는 컨테이너 쿼리(`@container` + `@sm:`/`@lg:`)로 짠다.** `PreviewFrame`의
